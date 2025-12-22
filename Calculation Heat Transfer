@@ -1,0 +1,63 @@
+import numpy as np
+
+#Code für Heizlastberechnung
+T_i= 20                   #Temperatur im Gewächshaus °C
+A= 2000                     #Außenfläche m°2
+U= 4                     #U-Wert inklusive latenter Wärme m^2*K*W^-1
+V= 6000                     #Luftvolumenn m^3
+n= 0.5                     #Luftwechsel 1/h
+T_a= [-8, -9, -10, -10, -9, -7, -5, -3,
+       0, 2, 4, 5, 6, 6, 5, 3,
+       1, 0, -2, -4, -5, -6, -7, -8]                   #Außentemperatur °C eig importiert als Liste 
+G_series=None,          #Solarstrahlung
+eta_solar=0.0,
+cp_luft= 0,33333            # Spezifische Wärmekapazität Luft Wh/K*m^3
+
+def simulate_heating_load(
+    T_i,
+    A,
+    U,
+    V,
+    n,
+    T_a,
+    cp_luft,
+    G_series=None,
+    eta_solar=0.0
+    ):
+    #Stündliche Heizlastsimulation
+
+    Q_dot = []
+
+    for t in range(len(T_a)):
+        T_e = T_a[t]
+
+        Q_trans = (A*(T_i-T_a)/U)
+        Q_luft = (V*(T_i-T_a)*n*cp_luft)
+
+        Q_solar = 0.0
+        if G_series is not None:
+            Q_solar = G_series[t] * A * eta_solar
+
+        Q = Q_trans + Q_luft - Q_solar
+        Q_dot.append(max(Q, 0))  # keine Kühlung
+
+    return np.array(Q_dot)
+
+
+# Funktion auslösen
+Q_dot = simulate_heating_load(
+    T_i=T_i,
+    A=A,
+    U=U,
+    V=V,
+    n=n,
+    T_a=T_a,
+    cp_luft=cp_luft,
+    G_series=G_series,
+    eta_solar=eta_solar
+)
+
+# Ausgabe der Ergebnisse
+print("Stündliche Heizlast Q̇ [W bzw. Wh/h]:")
+for hour, Q in enumerate(Q_dot):
+    print(f"Stunde {hour:02d}: {Q:.2f}")
