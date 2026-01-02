@@ -28,12 +28,14 @@ def calculate_heat_pump_cop(T_source, T_sink, eta=0.45):
 if __name__ == "__main__":
 
     # 1. Temperaturdaten laden
-    csv_file = "dwd_temperature_2024.csv"
+    csv_file = "Temperaturdaten 2024.csv"
     df = pd.read_csv(csv_file, sep=';', decimal=',')
     
     # Spaltenname für Außentemperatur
     temperature_column = 'TT_TU'
-    T_außen = df[temperature_column].values
+    
+    # Temperaturdaten extrahieren und in Float konvertieren (CSV enthält Strings mit Leerzeichen)
+    T_außen = df[temperature_column].astype(float).values
     
     # 2. Wärmepumpen-Parameter festlegen
     T_vorlauf = 35  # °C - Vorlauftemperatur (Fußbodenheizung)
