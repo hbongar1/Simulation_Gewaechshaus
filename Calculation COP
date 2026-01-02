@@ -1,0 +1,75 @@
+import pandas as pd
+import numpy as np
+
+def calculate_heat_pump_cop(T_source, T_sink, eta=0.45):
+    """
+    Berechnet den COP (Coefficient of Performance) einer Wärmepumpe.
+    
+    Parameters:
+    -----------
+    T_source : float or array
+        Quellentemperatur (z.B. Außenluft) in °C
+    T_sink : float or array
+        Senkentemperatur (z.B. Vorlauftemperatur) in °C
+    eta : float
+        Carnot-Wirkungsgrad (typisch 0.4-0.5 für Luft-Wärmepumpen)
+        
+    Returns:
+    --------
+    float or array
+        COP der Wärmepumpe
+    """
+    # Umrechnung in Kelvin
+    T_source_K = T_source + 273.15
+    T_sink_K = T_sink + 273.15
+    
+    # Carnot COP berechnen
+    cop_carnot = T_sink_K / (T_sink_K - T_source_K)
+    
+    # Realer COP
+    cop_real = eta * cop_carnot
+    
+    # COP sollte mindestens 1 sein
+    cop_real = np.maximum(cop_real, 1.0)
+    
+    return cop_real
+
+
+if __name__ == "__main__":
+    # CSV-Datei einlesen
+    csv_file = "dwd_temperature_2024.csv"  # Passe den Dateinamen an
+    
+    # CSV einlesen - passe sep und decimal bei Bedarf an
+    df = pd.read_csv(csv_file, sep=';', decimal=',')
+    
+    # Falls die Spalte anders heißt, passe hier an:
+    # Typische DWD-Spaltennamen: 'TT_TU', 'temperature', 'temp', etc.
+    temperature_column = 'TT_TU'  # Passe an deine CSV-Spalte an
+    
+    # Temperaturdaten extrahieren
+    T_außen = df[temperature_column].values
+    
+    # Parameter für die Wärmepumpe
+    T_vorlauf = 35  # °C - Vorlauftemperatur (anpassbar)
+    eta = 0.45  # Carnot-Wirkungsgrad für Luft-Wasser-Wärmepumpe
+    
+    # COP berechnen
+    cop = calculate_heat_pump_cop(T_außen, T_vorlauf, eta=eta)
+    
+    # COP zur DataFrame hinzufügen
+    df['COP'] = cop
+    
+    # Ergebnisse speichern
+    output_file = "heat_pump_cop_2024.csv"
+    df.to_csv(output_file, index=False, sep=';', decimal=',')
+    
+    # Statistiken ausgeben
+    print(f"COP Statistiken für 2024:")
+    print(f"Mittelwert: {cop.mean():.2f}")
+    print(f"Minimum:    {cop.min():.2f}")
+    print(f"Maximum:    {cop.max():.2f}")
+    print(f"\nErgebnisse gespeichert in: {output_file}")
+    
+    # Erste und letzte Zeilen anzeigen
+    print("\nErste 5 Einträge:")
+    print(df[[temperature_column, 'COP']].head())
