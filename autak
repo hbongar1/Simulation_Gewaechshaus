@@ -13,3 +13,8 @@ network.add('Generator', name = 'Netzstrom', bus = 'Strom', p_nom = 100000000)
 network.add('Load', name = 'Gewaechshaus_Strom', bus = 'Strom', p_set = 5)                               
 
 return network
+
+
+# Frage:
+# Hat die Außentemperatur und die Solareinstrahlung nicht direkte Auswirkungen auf die benötigte Wärmelast 
+# des Gewächshauses und nicht auf die Wärmepumpe bzw. Wärmeknoten?
