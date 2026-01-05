@@ -38,7 +38,7 @@ if __name__ == "__main__":
     T_außen = df[temperature_column].astype(float).values
     
     # 2. Wärmepumpen-Parameter festlegen
-    T_vorlauf = 35  # °C - Vorlauftemperatur (Fußbodenheizung)
+    T_vorlauf = 35  # °C - Vorlauftemperatur
     eta = 0.45  # Carnot-Wirkungsgrad für Luft-Wasser-Wärmepumpe
     
     # 3. Stündlichen COP für jede Temperatur berechnen
