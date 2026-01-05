@@ -1,0 +1,11 @@
+import pypsa                                                                                              # PyPSA importiert
+network = pypsa.Network()                                                                                 # Network erstellt
+network.set_snapshots(range(24))                                                                          # Symulationszeitraum 24 Stunden
+network.add('Bus', name = 'Strom')                                                                        # Knotenpunkt elektrische Energie
+network.add('Bus', name = 'Waerme')                                                                       # Knotenpunkt Wärme
+network.add('Generator', name = 'Windkraftanlage', bus = 'Strom', p_nom = 30)                             # Generator hinzugefügt der den Knotenpunkt Strom elekrische Energie liefert, Nennleisting 30 kW
+network.add('Link', name = 'Waermepumpe', bus0 = 'Strom', bus1 = 'Waerme', p_nom = 7, efficiency = 3)     # Eine Wärmepumpe wandelt Strom in Wärme um, in PyPSA macht man das mit einem Link, Nennleistung 7 kW
+network.add('Load', name = 'Gewaechshaus_Waerme', bus = 'Waerme', p_set = 10)                             # Das Gewächshaus zieht Wärme aus dem Waerme-Bus.
+network.add('Generator', name = 'Netzstrom', bus = 'Strom', p_nom = 100000000)                            # Strom aus dem Netz muss bei zu geringere elektrischer Energie aus Wind in Anspruch genommen werden, Nennleistung hoch, daher einfach irgendeine Zahl
+network.add('Load', name = 'Gewaechshaus_Strom', bus = 'Strom', p_set = 5)                                # Gewächshaus zieht Strom, ein Load kann immer nur an genau einem Bus hängen, wenn das Gewächshaus Strom UND Wärme braucht, braucht man zwei Load
+return network
