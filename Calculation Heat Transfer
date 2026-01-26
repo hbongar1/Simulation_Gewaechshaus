@@ -1,4 +1,11 @@
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+#Datentypen Einlesen Temperatur und Solareinstrahlung
+df_data_solar = pd.read_excel('Solareinstrahlung Köln.xlsx')
+df_data_temp = pd.read_excel('Köln Temp.xlsx')
 
 #Code für Heizlastberechnung
 T_i= 20                   #Temperatur im Gewächshaus °C
@@ -9,8 +16,11 @@ n= 0.5                     #Luftwechsel 1/h
 T_a = [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
        10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]                 #Außentemperatur °C eig importiert als Liste 
+
+T_a = df_data_temp['TT_TU']/10
 G_series=None          #Solarstrahlung
-eta_solar=0.0
+G_series = df_data_solar['SD_SO']/100
+eta_solar=0.8               #Wert liegt etwa zwischen 0.75 und 0.9 
 cp_luft= 0.33333            # Spezifische Wärmekapazität Luft Wh/K*m^3
 
 def simulate_heating_load(
@@ -24,16 +34,17 @@ def simulate_heating_load(
     G_series=None,
     eta_solar=0.0
     ):
+
     #Stündliche Heizlastsimulation
 
     Q_dot = []
 
-    for t in range(len(T_a)):
+    for t in range(len(G_series)):              #eig nicht an G_series orientieren weil falsch
         T_e = T_a[t]
 
         Q_trans = (A*(T_i-T_a[t])/U)
         Q_luft = (V*(T_i-T_a[t])*n*cp_luft)
-
+    
         Q_solar = 0.0
         if G_series is not None:
             Q_solar = G_series[t] * A * eta_solar
@@ -57,7 +68,8 @@ Q_dot = simulate_heating_load(
     eta_solar=eta_solar
 )
 
-# Ausgabe der Ergebnisse
-print("Stündliche Heizlast Q̇ [W bzw. Wh/h]:")
-for hour, Q in enumerate(Q_dot):
-    print(f"Stunde {hour:02d}: {Q:.2f}")
+#Graph erstellen
+plt.plot(Q_dot)
+plt.xlabel("Index")
+plt.ylabel("Q_dot")
+plt.show()
