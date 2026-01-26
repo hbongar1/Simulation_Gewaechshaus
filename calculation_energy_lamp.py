@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 # Leistungsaufnahme einer Lampe in Watt für 1,44 m^2 (120cm * 120cm)
 leistungsaufnahme_einzeln = 632  # W
-abdeckungsflaeche_einzeln = 1.44  # m²
+abdeckungsflaeche_einzeln = 2.5  # m²
 
 # Größe des Gewächshauses
 flaeche = 10000  # m² (1 Hektar)
