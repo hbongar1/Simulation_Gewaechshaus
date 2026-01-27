@@ -1,63 +1,78 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
-def calculate_heat_pump_cop(T_source, T_sink, eta=0.45):
-    """
-    Berechnet den COP (Coefficient of Performance) einer Wärmepumpe
-    
-    T_source: Quellentemperatur (Außenluft) in °C
-    T_sink: Senkentemperatur (Vorlauf) in °C
-    eta: Carnot-Wirkungsgrad (typisch 0.40-0.50 für Luft-Wasser-WP)
-    """
-    # Umrechnung in Kelvin
-    T_source_K = T_source + 273.15
-    T_sink_K = T_sink + 273.15
-    
-    # Carnot-COP berechnen (theoretisches Maximum)
-    cop_carnot = T_sink_K / (T_sink_K - T_source_K)
-    
-    # Realer COP = Carnot-COP * Wirkungsgrad
-    cop_real = eta * cop_carnot
-    
-    # COP muss mindestens 1.0 sein (physikalisches Minimum)
-    cop_real = np.maximum(cop_real, 1.0)
-    
-    return cop_real
+#Datentypen Einlesen Temperatur und Solareinstrahlung
+df_data_solar = pd.read_excel('Solareinstrahlung Bochum.xlsx')
+df_data_temp = pd.read_excel('Köln Temp.xlsx')
+
+#Code für Heizlastberechnung
+T_i= 20                         #Temperatur im Gewächshaus °C
+A= 10000                        #Außenfläche m°2
+U= 4                            #U-Wert inklusive latenter Wärme m^2*K*W^-1
+V= 30000                        #Luftvolumenn m^3
+n= 0.5                          #Luftwechsel 1/h
+#T_a = [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]                 #Außentemperatur °C eig importiert als Liste 
+
+T_a = df_data_temp['TT_TU']/10
+#G_series=None                  #Solarstrahlung
+G_series = df_data_solar['FG_LBERG']/100
+eta_solar=0.8                   #Wert liegt etwa zwischen 0.75 und 0.9 
+cp_luft= 0.33333                # Spezifische Wärmekapazität Luft Wh/K*m^3
+
+#Solareinstrahlung umrechnen
+for i in range(len(G_series)):
+    if G_series[i] < 0:
+        G_series[i] = 0
+    solar_clean=G_series[i]*10000/3600
 
 
-if __name__ == "__main__":
+def simulate_heating_load(
+    T_i,
+    A,
+    U,
+    V,
+    n,
+    T_a,
+    cp_luft,
+    G_series=None,
+    eta_solar=0.0
+    ):
 
-    # 1. Temperaturdaten laden
-    csv_file = "Temperaturdaten 2024.csv"
-    df = pd.read_csv(csv_file, sep=';', decimal=',')
+    #Stündliche Heizlastsimulation
+
+    Q_dot = []
+
+    for t in range(len(G_series)):              #eig nicht an G_series orientieren weil falsch
+        T_e = T_a[t]
+
+        Q_trans = (A*(T_i-T_a[t])/U)
+        Q_luft = (V*(T_i-T_a[t])*n*cp_luft)
     
-    # Spaltenname für Außentemperatur
-    temperature_column = 'TT_TU'
-    
-    # Temperaturdaten extrahieren und in Float konvertieren (CSV enthält Strings mit Leerzeichen)
-    T_außen = df[temperature_column].astype(float).values
-    
-    # 2. Wärmepumpen-Parameter festlegen
-    T_vorlauf = 35  # °C - Vorlauftemperatur
-    eta = 0.45  # Carnot-Wirkungsgrad für Luft-Wasser-Wärmepumpe
-    
-    # 3. Stündlichen COP für jede Temperatur berechnen
-    cop = calculate_heat_pump_cop(T_außen, T_vorlauf, eta=eta)
-    
-    # COP-Werte zum DataFrame hinzufügen
-    df['COP'] = cop
-    
-    # 4. Ergebnisse speichern
-    output_file = "heat_pump_cop_2024.csv"
-    df.to_csv(output_file, index=False, sep=';', decimal=',')
-    
-    # 5. Statistiken ausgeben
-    print(f"COP Statistiken für 2024:")
-    print(f"Mittelwert: {cop.mean():.2f}")
-    print(f"Minimum:    {cop.min():.2f}")
-    print(f"Maximum:    {cop.max():.2f}")
-    print(f"\nErgebnisse gespeichert in: {output_file}")
-    
-    # Beispielwerte anzeigen
-    print("\nErste 5 Einträge:")
-    print(df[[temperature_column, 'COP']].head())
+        Q_solar = 0.0
+        Q_solar = solar_clean[t] * A * eta_solar
+
+        Q = Q_trans + Q_luft - Q_solar
+        Q_dot.append(max(Q, 0))  # keine Kühlung
+
+    return np.array(Q_dot)
+
+
+# Funktion auslösen
+Q_dot = simulate_heating_load(
+    T_i=T_i,
+    A=A,
+    U=U,
+    V=V,
+    n=n,
+    T_a=T_a,
+    cp_luft=cp_luft,
+    G_series=G_series,
+    eta_solar=eta_solar
+)
+
+#Graph erstellen
+plt.plot(G_series)
+plt.xlabel("Index")
+plt.ylabel("Q_dot")
+plt.show()
