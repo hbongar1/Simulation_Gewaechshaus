@@ -4,7 +4,12 @@ import matplotlib.pyplot as plt
 
 #Datentypen Einlesen Temperatur und Solareinstrahlung
 df_data_solar = pd.read_excel('Solareinstrahlung Bochum.xlsx')
-df_data_temp = pd.read_excel('Köln Temp.xlsx')
+
+# Temperaturdaten Köln einlesen (CSV mit allen Jahren) und nur 2019 filtern
+df_data_temp = pd.read_csv('Temperatur Köln.csv', sep=';')
+df_data_temp['MESS_DATUM'] = df_data_temp['MESS_DATUM'].astype(str)
+df_data_temp = df_data_temp[df_data_temp['MESS_DATUM'].str.startswith('2019')]
+df_data_temp = df_data_temp.reset_index(drop=True)
 
 #Code für Heizlastberechnung
 T_i= 20                         #Temperatur im Gewächshaus °C
@@ -14,7 +19,7 @@ V= 30000                        #Luftvolumenn m^3
 n= 0.5                          #Luftwechsel 1/h
 #T_a = [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]                 #Außentemperatur °C eig importiert als Liste 
 
-T_a = df_data_temp['TT_TU']/10
+T_a = df_data_temp['TT_TU']    # Werte sind bereits in °C
 #G_series=None                  #Solarstrahlung
 G_series = df_data_solar['FG_LBERG']/100
 eta_solar=0.8                   #Wert liegt etwa zwischen 0.75 und 0.9 
