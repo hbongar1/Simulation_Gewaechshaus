@@ -1,0 +1,9 @@
+# Lizenz und Dokumente
+Dokumente/
+
+# Virtual Environment
+venv/
+
+# Python
+__pycache__/
+*.pyc
