@@ -1,4 +1,4 @@
-# Berechnung des stündlichen Energieverbrauchs der Lampen für 2019
+# Berechnung des stündlichen Energieverbrauchs der Lampen für 2019 in kW
 # Pflanzen benötigen 14 Stunden Licht pro Tag: 6:00 - 20:00 Uhr
 # Lampen gehen in Stunden an, wenn Solareinstrahlung < 100 W/m²
 
@@ -26,7 +26,7 @@ print(f"Energieverbrauch pro Stunde (wenn alle an): {energieverbrauch_gesamt_stu
 # Schwellwert für ausreichende Solareinstrahlung
 SOLAR_THRESHOLD = 100  # W/m²
 
-# Lichtzeitfenster: 6:00 - 20:00 Uhr (14 Stunden)
+# Lichtzeit von 6:00 - 20:00 Uhr (14 Stunden)
 LIGHT_START_HOUR = 6
 LIGHT_END_HOUR = 20
 
@@ -84,18 +84,18 @@ while current_time < end_date:
         solar_radiation = solar_data.get(current_time, 0)
         
         if solar_radiation < SOLAR_THRESHOLD:
-            # Nicht genug Sonnenlicht -> Lampen an
-            energy_wh = energieverbrauch_gesamt_stunde
+            # Nicht genug Sonnenlicht > Lampen an
+            energy_kw = energieverbrauch_gesamt_stunde / 1000
         else:
-            # Genug Sonnenlicht -> Lampen aus
-            energy_wh = 0
+            # Genug Sonnenlicht > Lampen aus
+            energy_kw = 0
     else:
-        # Außerhalb des Lichtzeitfensters -> Lampen aus
-        energy_wh = 0
+        # Außerhalb des Lichtzeitfensters > Lampen aus
+        energy_kw = 0
     
     # Datum/Uhrzeit-Format: YYYYMMDDHH
     timestamp = current_time.strftime('%Y%m%d%H')
-    results.append([timestamp, round(energy_wh, 2)])
+    results.append([timestamp, round(energy_kw, 2)])
     
     # Zur nächsten Stunde
     current_time += timedelta(hours=1)
@@ -104,7 +104,7 @@ while current_time < end_date:
 output_file = 'hourly_lamp_energy_2019.csv'
 with open(output_file, 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f, delimiter=';')
-    writer.writerow(['DateTime', 'Energy_Wh'])
+    writer.writerow(['DateTime', 'Energy_kW'])
     writer.writerows(results)
 
 print(f"\nErgebnisse gespeichert in: {output_file}")
@@ -112,7 +112,7 @@ print(f"Anzahl Datensätze: {len(results)}")
 
 # Statistik berechnen
 total_lamp_hours = sum(1 for r in results if r[1] > 0)
-total_energy_kwh = sum(r[1] for r in results) / 1000
+total_energy_kwh = sum(r[1] for r in results)  # bereits in kW, Summe ergibt kWh
 
 print(f"\nStatistik für 2019:")
 print(f"Gesamte Stunden mit Lampenbetrieb: {total_lamp_hours}")
