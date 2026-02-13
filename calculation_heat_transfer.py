@@ -6,7 +6,7 @@ import math
 # ============================================================
 # Gewächshaus-Parameter
 # ============================================================
-A_grund = 1000                  # Grundfläche in m²
+A_grund = 10000                 # Grundfläche in m²
 hoehe = 4.5                     # Höhe in m
 V = A_grund * hoehe             # Luftvolumen in m³ (= 4500 m³)
 
