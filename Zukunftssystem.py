@@ -151,11 +151,13 @@ def erstelle_zukunftssystem(zeitindex, params, waermebedarf, strombedarf, cop_ze
                 carrier="grid")
     
     # Netz-Export (Überschussstrom verkaufen)
+    # sign=-1: Generator wirkt als Senke (nimmt Strom auf = Einspeisung ins Netz)
     network.add("Generator",
                 "Netz_Export",
                 bus="Strom",
                 p_nom=params.netz_max_export,
                 marginal_cost=-params.netz_export_erloese,  # Negativ = Erlös
+                sign=-1,
                 carrier="grid_export")
     
     return network
@@ -242,7 +244,7 @@ def main():
         print("\n--- Strombilanz ---")
         strom_wind = network.generators_t.p['Windkraftanlage'].sum()
         strom_netz_import = network.generators_t.p['Netz_Import'].sum()
-        strom_netz_export = network.generators_t.p['Netz_Export'].sum()
+        strom_netz_export = network.generators_t.p['Netz_Export'].sum()  # Positiv = Exportmenge
         strom_wp = network.links_t.p0['Waermepumpe'].sum()  # Strombedarf WP
         strom_last = network.loads_t.p['Stromlast'].sum()
         
@@ -278,10 +280,15 @@ def main():
         
         # Autarkiegrad
         print("\n--- Kennzahlen ---")
-        autarkie_strom = (strom_wind / (strom_wind + strom_netz_import)) * 100
+        strom_erzeugung = strom_wind + strom_netz_import
+        if strom_erzeugung > 0:
+            autarkie_strom = (strom_wind / strom_erzeugung) * 100
+        else:
+            autarkie_strom = 0.0
         print(f"Stromautarkie:    {autarkie_strom:>12.2f} %")
         
-        mittlerer_cop = waerme_wp / strom_wp if strom_wp > 0 else 0
+        # COP: Wärmeoutput / Strominput (p1 ist negativ in PyPSA, daher abs)
+        mittlerer_cop = abs(waerme_wp / strom_wp) if strom_wp > 0 else 0
         print(f"Realisierter COP: {mittlerer_cop:>12.2f}")
         
         print("\n" + "="*80)
