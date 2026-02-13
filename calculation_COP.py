@@ -23,6 +23,7 @@ delta_T[delta_T <= 0] = np.nan          # Vermeidung Division durch 0 (wenn T_au
 
 COP = eta_carnot * T_senke / delta_T
 COP = COP.clip(upper=10)               # COP auf max 10 begrenzen (realistische Obergrenze)
+COP = COP.fillna(10)                   # NaN (T_außen >= T_senke) mit 10 füllen - keine Heizung nötig
 
 # Ergebnisse ausgeben
 print(f"Anzahl Stunden 2019: {len(COP)}")
