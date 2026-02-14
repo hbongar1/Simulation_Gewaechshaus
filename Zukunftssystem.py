@@ -118,6 +118,7 @@ network.add('Generator',
             p_nom_max=wind_nennleistung,
             p_max_pu=wind_p_max_pu,
             capital_cost=capital_cost_wind,
+            lifetime=wind_lifetime,
             carrier='wind')
 
 # Netz-Export (Überschuss-Windstrom verkaufen)
@@ -181,6 +182,17 @@ print("=" * 80)
 
 # Gesamtkosten
 print(f"\nGesamtkosten: {network.objective:.2f} €")
+
+# Investitionskosten berechnen
+invest_cost_stores      = network.stores.e_nom_opt * network.stores.capital_cost * network.stores.lifetime
+invest_cost_generators  = network.generators.p_nom_opt * network.generators.capital_cost * network.generators.lifetime
+invest_cost_links       = network.links.p_nom_opt * network.links.capital_cost * network.links.lifetime
+df_invest_cost          = pd.concat([invest_cost_stores, invest_cost_generators, invest_cost_links]).fillna(0)
+invest_cost             = round(df_invest_cost.sum(), 2)
+
+print(f"\n--- Investitionskosten ---")
+print(df_invest_cost)
+print(f"\nGesamte Investitionskosten: {invest_cost:.2f} €")
 
 # Optimierte Kapazitäten
 print("\n--- Optimierte Kapazitäten ---")
