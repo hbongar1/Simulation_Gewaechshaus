@@ -97,6 +97,7 @@ def erstelle_zukunftssystem(zeitindex, params, waermebedarf, strombedarf, cop_ze
     
     # Busse definieren
     network.add("Bus", "Strom", carrier="strom")
+    network.add("Bus", "Wind", carrier="wind")
     network.add("Bus", "Waerme", carrier="waerme")
     
     # Lasten hinzufügen
@@ -110,19 +111,36 @@ def erstelle_zukunftssystem(zeitindex, params, waermebedarf, strombedarf, cop_ze
                 bus="Waerme",
                 p_set=waermebedarf)
     
-    # Windkraftanlage
+    # Windkraftanlage -> Wind-Bus
     # p_max_pu: Verfügbarkeit als Anteil der Nennleistung (0 bis 1)
     p_max_pu = windleistung / params.wind_nennleistung
     p_max_pu = p_max_pu.clip(lower=0, upper=1)
     
     network.add("Generator",
                 "Windkraftanlage",
-                bus="Strom",
+                bus="Wind",
                 p_nom=params.wind_nennleistung,
                 p_max_pu=p_max_pu,
                 marginal_cost=0.01,  # Minimale Wartungskosten
                 capital_cost=1200,  # €/kW
                 carrier="wind")
+    
+    # Netz-Export (Überschuss-Windstrom verkaufen)
+    # sign=-1: Generator wirkt als Senke auf Wind-Bus (nimmt Strom auf = Einspeisung ins Netz)
+    network.add("Generator",
+                "Netz_Export",
+                bus="Wind",
+                p_nom=params.netz_max_export,
+                marginal_cost=-params.netz_export_erloese,  # Negativ = Erlös
+                sign=-1,
+                carrier="grid_export")
+    
+    # Wind-Eigenverbrauch (Wind-Bus -> Strom-Bus)
+    network.add("Link",
+                "Wind_Eigenverbrauch",
+                bus0="Wind",
+                bus1="Strom",
+                p_nom=params.wind_nennleistung)
     
     # Wärmepumpe (Strom -> Wärme) mit zeitabhängigem COP
     network.add("Link",
@@ -149,16 +167,6 @@ def erstelle_zukunftssystem(zeitindex, params, waermebedarf, strombedarf, cop_ze
                 p_nom=params.netz_max_import,
                 marginal_cost=params.netz_import_kosten,
                 carrier="grid")
-    
-    # Netz-Export (Überschussstrom verkaufen)
-    # sign=-1: Generator wirkt als Senke (nimmt Strom auf = Einspeisung ins Netz)
-    network.add("Generator",
-                "Netz_Export",
-                bus="Strom",
-                p_nom=params.netz_max_export,
-                marginal_cost=-params.netz_export_erloese,  # Negativ = Erlös
-                sign=-1,
-                carrier="grid_export")
     
     return network
 
@@ -242,15 +250,17 @@ def main():
         
         # Energiebilanz Strom
         print("\n--- Strombilanz ---")
-        strom_wind = network.generators_t.p['Windkraftanlage'].sum()
+        strom_wind_gesamt = network.generators_t.p['Windkraftanlage'].sum()
+        strom_wind_eigen = network.links_t.p0['Wind_Eigenverbrauch'].sum()  # Eigenverbrauch
         strom_netz_import = network.generators_t.p['Netz_Import'].sum()
-        strom_netz_export = network.generators_t.p['Netz_Export'].sum()  # Positiv = Exportmenge
+        strom_netz_export = network.generators_t.p['Netz_Export'].sum()  # Exportmenge
         strom_wp = network.links_t.p0['Waermepumpe'].sum()  # Strombedarf WP
         strom_last = network.loads_t.p['Stromlast'].sum()
         
-        print(f"Windkraft:        {strom_wind:>12.2f} kWh")
+        print(f"Windkraft gesamt: {strom_wind_gesamt:>12.2f} kWh")
+        print(f"  Eigenverbrauch: {strom_wind_eigen:>12.2f} kWh")
+        print(f"  Netz Export:    {strom_netz_export:>12.2f} kWh")
         print(f"Netz Import:      {strom_netz_import:>12.2f} kWh")
-        print(f"Netz Export:      {strom_netz_export:>12.2f} kWh")
         print(f"Wärmepumpe:       {strom_wp:>12.2f} kWh")
         print(f"Stromlast:        {strom_last:>12.2f} kWh")
         
@@ -278,11 +288,11 @@ def main():
         print(f"Maximum:          {speicher_e.max():>12.2f} kWh")
         print(f"Minimum:          {speicher_e.min():>12.2f} kWh")
         
-        # Autarkiegrad
+        # Autarkiegrad (Eigenverbrauch Wind / Gesamtstrombedarf)
         print("\n--- Kennzahlen ---")
-        strom_erzeugung = strom_wind + strom_netz_import
-        if strom_erzeugung > 0:
-            autarkie_strom = (strom_wind / strom_erzeugung) * 100
+        strom_verbrauch = strom_wind_eigen + strom_netz_import
+        if strom_verbrauch > 0:
+            autarkie_strom = (strom_wind_eigen / strom_verbrauch) * 100
         else:
             autarkie_strom = 0.0
         print(f"Stromautarkie:    {autarkie_strom:>12.2f} %")
