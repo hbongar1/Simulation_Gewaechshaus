@@ -15,7 +15,10 @@ import numpy as np
 class ZukunftssystemParameter:
     def __init__(self):
         # Windkraftanlage (aus CSV)
-        self.wind_nennleistung = 6000  # kW - Nennleistung der Anlage
+        self.wind_nennleistung = 6000  # kW - maximale Nennleistung der Anlage
+        self.wind_lebensdauer = 20  # Jahre
+        self.wind_zinssatz = 0.05  # 5% Zinssatz
+        self.wind_capital_cost = 1200  # €/kW Investitionskosten
         
         # Wärmepumpe
         self.wp_leistung_elektrisch = 2000  # kW - elektrische Leistung
@@ -26,8 +29,13 @@ class ZukunftssystemParameter:
         # Netzinteraktion (falls benötigt als Backup)
         self.netz_import_kosten = 0.25  # €/kWh
         self.netz_export_erloese = 0.08  # €/kWh
-        self.netz_max_import = 5000  # kW
         self.netz_max_export = 5000  # kW
+    
+    def annuitaet(self, invest, lebensdauer, zinssatz):
+        """Berechnet die jährliche Annuität einer Investition"""
+        q = 1 + zinssatz
+        annuitaetsfaktor = (q**lebensdauer * zinssatz) / (q**lebensdauer - 1)
+        return invest * annuitaetsfaktor
 
 
 def lade_heizlast(dateiname='heizlast_2019.csv'):
@@ -116,13 +124,18 @@ def erstelle_zukunftssystem(zeitindex, params, waermebedarf, strombedarf, cop_ze
     p_max_pu = windleistung / params.wind_nennleistung
     p_max_pu = p_max_pu.clip(lower=0, upper=1)
     
+    # Annuisierte Investitionskosten für Windkraftanlage
+    wind_annual_cost = params.annuitaet(
+        params.wind_capital_cost, params.wind_lebensdauer, params.wind_zinssatz)
+    
     network.add("Generator",
                 "Windkraftanlage",
                 bus="Wind",
-                p_nom=params.wind_nennleistung,
+                p_nom_extendable=True,  # Gurobi optimiert die Anlagengröße
+                p_nom_max=params.wind_nennleistung,  # Maximale Kapazität
                 p_max_pu=p_max_pu,
                 marginal_cost=0.01,  # Minimale Wartungskosten
-                capital_cost=1200,  # €/kW
+                capital_cost=wind_annual_cost,  # €/kW/Jahr (annuisiert)
                 carrier="wind")
     
     # Netz-Export (Überschuss-Windstrom verkaufen)
@@ -164,7 +177,7 @@ def erstelle_zukunftssystem(zeitindex, params, waermebedarf, strombedarf, cop_ze
     network.add("Generator",
                 "Netz_Import",
                 bus="Strom",
-                p_nom=params.netz_max_import,
+                p_nom=np.inf,  # Unbegrenzte Netzkapazität
                 marginal_cost=params.netz_import_kosten,
                 carrier="grid")
     
@@ -204,9 +217,7 @@ def main():
     zeitindex = zeitindex.intersection(cop_df.index)
     zeitindex = zeitindex.intersection(wind_df.index)
     
-    # Nur die ersten 168 Stunden (1 Woche) für schnellere Tests
-    # Kommentiere die nächste Zeile aus, um das ganze Jahr zu simulieren
-    # zeitindex = zeitindex[:168]  # 1 Woche
+    
     
     print(f"   - Simulationszeitraum: {zeitindex[0]} bis {zeitindex[-1]}")
     print(f"   - Anzahl Zeitschritte: {len(zeitindex)}")
@@ -247,6 +258,11 @@ def main():
         
         # Gesamtkosten
         print(f"\nGesamtkosten: {network.objective:.2f} €")
+        
+        # Optimierte Kapazitäten
+        print("\n--- Optimierte Kapazitäten ---")
+        wind_opt = network.generators.p_nom_opt['Windkraftanlage']
+        print(f"Windanlage:       {wind_opt:>12.2f} kW (max: {params.wind_nennleistung} kW)")
         
         # Energiebilanz Strom
         print("\n--- Strombilanz ---")
