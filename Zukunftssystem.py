@@ -43,15 +43,18 @@ df_wind = df_wind.rename(columns={'electricity': 'Wind_kW'})
 
 # Windkraftanlage
 wind_nennleistung = 6000        # kW - maximale Nennleistung
-wind_lebensdauer = 20           # Jahre
-wind_zinssatz = 0.05            # 5%
-wind_capital_cost = 1200        # €/kW Investitionskosten
+capital_cost_wind = 150         # €/kW/a als Annuität
+wind_lifetime = 20              # Jahre
 
 # Wärmepumpe
-wp_leistung_elektrisch = 2000   # kW - elektrische Leistung
+capital_cost_wp = 480           # €/kW/a als Annuität
+wp_lifetime = 20                # Jahre
 
 # Wärmespeicher
-waermespeicher_kapazitaet = 5000  # kWh
+waermespeicher_kapazitaet = 5000            # kWh
+capital_cost_waermespeicher = 5              # €/kWh/a als Annuität
+waermespeicher_lifetime = 25                # Jahre
+waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
 # Netzinteraktion
 netz_import_kosten = 0.25       # €/kWh
@@ -80,10 +83,7 @@ windleistung = df_wind.loc[zeitindex, 'Wind_kW']
 wind_p_max_pu = windleistung / wind_nennleistung
 wind_p_max_pu = wind_p_max_pu.clip(lower=0, upper=1)
 
-# Annuisierte Investitionskosten Windkraftanlage
-q = 1 + wind_zinssatz
-annuitaetsfaktor = (q**wind_lebensdauer * wind_zinssatz) / (q**wind_lebensdauer - 1)
-wind_annual_cost = wind_capital_cost * annuitaetsfaktor
+
 
 # Datenübersicht
 print(f"\nMittlere Heizlast:      {waermebedarf.mean():.2f} kW")
@@ -117,8 +117,7 @@ network.add('Generator',
             p_nom_extendable=True,
             p_nom_max=wind_nennleistung,
             p_max_pu=wind_p_max_pu,
-            marginal_cost=0.01,
-            capital_cost=wind_annual_cost,
+            capital_cost=capital_cost_wind,
             carrier='wind')
 
 # Netz-Export (Überschuss-Windstrom verkaufen)
@@ -142,18 +141,21 @@ network.add('Link',
             name='Waermepumpe',
             bus0='Strom',
             bus1='Waerme',
-            p_nom=wp_leistung_elektrisch,
             efficiency=cop_zeitreihe,
-            marginal_cost=0.005,
-            capital_cost=600)
+            p_nom_extendable=True,
+            capital_cost=capital_cost_wp,
+            lifetime=wp_lifetime)
 
 # Wärmespeicher
 network.add('Store',
             name='Waermespeicher',
             bus='Waerme',
             e_nom=waermespeicher_kapazitaet,
+            e_nom_extendable=True,
+            capital_cost=capital_cost_waermespeicher,
+            standing_loss=waermespeicher_standing_loss,
             e_cyclic=True,
-            standing_loss=0.001)
+            lifetime=waermespeicher_lifetime)
 
 # Netz-Import (Backup)
 network.add('Generator',
