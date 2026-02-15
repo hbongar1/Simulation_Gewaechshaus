@@ -120,8 +120,6 @@ network.add('Generator',
             lifetime=wind_lifetime,
             carrier='wind')
 
-
-
 # Wind-Eigenverbrauch (Wind-Bus -> Strom-Bus)
 network.add('Link',
             name='Wind_Eigenverbrauch',
