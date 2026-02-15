@@ -61,7 +61,7 @@ waermespeicher_lifetime = 25                # Jahre
 waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
 # Netzinteraktion
-netz_import_kosten = 0.25       # €/kWh
+netz_import_kosten = 0.1361      # €/kWh
 
 # ============================================================
 # 3. Daten vorbereiten
@@ -199,14 +199,14 @@ invest_cost_stromspeicher_year    = network.stores.e_nom_opt['Stromspeicher'] * 
 invest_cost_waermespeicher_year   = network.stores.e_nom_opt['Waermespeicher'] * capital_cost_waermespeicher
 invest_cost_windkraftanlage_year  = network.generators.p_nom_opt['Windkraftanlage'] * capital_cost_wind
 invest_cost_waermepumpe_year      = network.links.p_nom_opt['Waermepumpe'] * capital_cost_wp
-invest_cost_gesamt_year = invest_cost_stromspeicher_year + invest_cost_waermespeicher_year + invest_cost_windkraftanlage_year + invest_cost_waermepumpe_year 
+invest_cost_year = invest_cost_stromspeicher_year + invest_cost_waermespeicher_year + invest_cost_windkraftanlage_year + invest_cost_waermepumpe_year 
 
 print(f"\n--- Investitionskosten jährlich ---")
 print(f'Stromspeicher:  {invest_cost_stromspeicher_year:>12.2f} €')
 print(f'Wärmespeicher:  {invest_cost_waermespeicher_year:>12.2f} €')
 print(f'Windkraftanlage:{invest_cost_windkraftanlage_year:>12.2f} €')
 print(f'Wärmepumpe:     {invest_cost_waermepumpe_year:>12.2f} €')
-print(f"\nInvestitionskosten jährlich: {invest_cost_gesamt_year:.2f} €")
+print(f"\nInvestitionskosten jährlich: {invest_cost_year:.2f} €")
 
 # Optimierte Leistung
 print("\n--- Optimierte Leistung ---")
@@ -258,13 +258,11 @@ print(f"Wärmepumpe:       {waerme_wp:>12.2f} kWh")
 print(f"Wärmelast:        {waerme_last:>12.2f} kWh")
 
 # Kennzahlen
+
+autakie = strom_wind_gesamt/strom_last*100
+
 print("\n--- Kennzahlen ---")
-strom_verbrauch = strom_wind_eigen + strom_netz_import
-if strom_verbrauch > 0:
-    autarkie_strom = (strom_wind_eigen / strom_verbrauch) * 100
-else:
-    autarkie_strom = 0.0
-print(f"Stromautarkie:    {autarkie_strom:>12.2f} %")
+print(f"Stromautarkie: {autakie:>12.2f} %")
 
 mittlerer_cop = abs(waerme_wp / strom_wp) if strom_wp > 0 else 0
 print(f"Realisierter COP: {mittlerer_cop:>12.2f}")
