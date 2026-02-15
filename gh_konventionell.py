@@ -52,7 +52,7 @@ zeitindex = df_heizlast.index.intersection(df_strombedarf.index)
 
 # Nur die ersten 168 Stunden (1 Woche) für schnellere Tests
 # Kommentiere die nächste Zeile aus, um das ganze Jahr zu simulieren
-zeitindex = zeitindex[:168]  # 1 Woche
+# zeitindex = zeitindex[:168]  # 1 Woche
 
 print(f"Simulationszeitraum: {zeitindex[0]} bis {zeitindex[-1]}")
 print(f"Anzahl Zeitschritte: {len(zeitindex)}")
