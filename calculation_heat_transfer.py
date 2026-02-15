@@ -23,7 +23,7 @@ print(f"Hüllfläche: {A_huell:.0f} m² (Dach: {A_dach:.0f} + Wände: {A_wand:.0
 # Thermische Parameter
 U = 4.0                         # U-Wert in W/(m²·K) - typisch Gewächshaus
 T_i = 20                        # Solltemperatur Gewächshaus in °C
-n = 0.5                         # Luftwechselrate in 1/h
+n = 0.5                         # LuftwechselratUe in 1/h
 cp_luft = 0.33333               # Spez. Wärmekapazität Luft in Wh/(K·m³)
 eta_solar = 0.8                 # Solarer Transmissionsgrad (0.75-0.9)
 
@@ -40,20 +40,17 @@ T_a = df_temp['TT_TU'].values   # Außentemperatur in °C
 print(f"Temperaturdaten 2019: {len(T_a)} Stunden")
 
 # ============================================================
-# Solardaten Bochum einlesen – nur 2019
-# FG_LBERG = Globalstrahlung in J/(h·cm²)
-# Umrechnung: × 10000/3600 = W/m²
+# Solardaten Bochum/Bremen einlesen – nur 2019
+# Solar_W_m2 = Globalstrahlung bereits in W/m² (bereinigt)
 # ============================================================
-df_solar = pd.read_csv('Solareinstrahlung_Bochum.csv', sep=';')
+df_solar = pd.read_csv('Solareinstrahlung_Bochum_Bremen.csv', sep=';')
 df_solar.columns = df_solar.columns.str.strip()
-df_solar['MESS_DATUM'] = df_solar['MESS_DATUM'].astype(str)
-df_solar = df_solar[df_solar['MESS_DATUM'].str.startswith('2019')]
+df_solar['DateTime'] = df_solar['DateTime'].astype(str)
+df_solar = df_solar[df_solar['DateTime'].str.startswith('2019')]
 df_solar = df_solar.reset_index(drop=True)
 
-# Globalstrahlung umrechnen in W/m²
-G_solar = df_solar['FG_LBERG'].values.astype(float)
-G_solar[G_solar < 0] = 0        # Fehlwerte (-999) auf 0 setzen
-G_solar = G_solar * 10000 / 3600  # Umrechnung in W/m²
+# Globalstrahlung (bereits in W/m² und bereinigt)
+G_solar = df_solar['Solar_W_m2'].values.astype(float)
 
 print(f"Solardaten 2019: {len(G_solar)} Stunden")
 
