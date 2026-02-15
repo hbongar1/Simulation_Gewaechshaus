@@ -28,15 +28,20 @@ df_strombedarf.set_index('datetime', inplace=True)
 # ============================================================
 
 # Wärmespeicher
-waermespeicher_kapazitaet = 5000  # kWh
+waermespeicher_kapazitaet = 5000            # kWh
+capital_cost_waermespeicher = 10             # €/kWh/a als Annuität
+waermespeicher_lifetime = 25                # Jahre
+waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
 # Gaskessel
-gaskessel_leistung = 1500       # kW
-gaskessel_wirkungsgrad = 0.95   # 95%
+gaskessel_leistung = 1500                   # kW
+gaskessel_wirkungsgrad = 0.95               # 95%
+capital_cost_gaskessel = 7                  # €/kW/a als Annuität
+gaskessel_lifetime = 20                     # Jahre
 
 # Netzstrom
-strom_preis = 0.25              # €/kWh
-gas_preis = 0.08                # €/kWh
+strom_preis = 0.25                          # €/kWh
+gas_preis = 0.08                            # €/kWh
 
 # ============================================================
 # 3. Daten vorbereiten
@@ -100,8 +105,11 @@ network.add('Store',
             name='Waermespeicher',
             bus='Waerme',
             e_nom=waermespeicher_kapazitaet,
+            e_nom_extendable=True,
+            capital_cost=capital_cost_waermespeicher,
+            standing_loss=waermespeicher_standing_loss,
             e_cyclic=True,
-            standing_loss=0.001)
+            lifetime=waermespeicher_lifetime)
 
 # Gaskessel (Gas -> Wärme)
 network.add('Link',
@@ -110,8 +118,8 @@ network.add('Link',
             bus1='Waerme',
             p_nom=gaskessel_leistung,
             efficiency=gaskessel_wirkungsgrad,
-            marginal_cost=0.01,
-            capital_cost=100)
+            capital_cost=capital_cost_gaskessel,
+            lifetime=gaskessel_lifetime)
 
 # ============================================================
 # 5. Optimierung mit Gurobi
@@ -152,14 +160,15 @@ gas_kessel = network.links_t.p0['Gaskessel'].sum()
 
 print(f"Gas Kessel:       {gas_kessel:>12.2f} kWh")
 
-# Kostenaufschlüsselung
-print("\n--- Kostenaufschlüsselung ---")
+# Betriebskosten
+print("\n--- Betriebskosten ---")
 kosten_strom = strom_netz * strom_preis
 kosten_gas = gas_kessel * gas_preis
+operational_costs = round(kosten_strom + kosten_gas, 2)
 
 print(f"Stromkosten:      {kosten_strom:>12.2f} €")
 print(f"Gaskosten:        {kosten_gas:>12.2f} €")
-print(f"Summe:            {kosten_strom + kosten_gas:>12.2f} €")
+print(f"Betriebskosten:   {operational_costs:>12.2f} €")
 
 # Wärmespeicher
 print("\n--- Wärmespeicher ---")
