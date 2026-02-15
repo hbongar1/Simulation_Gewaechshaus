@@ -182,7 +182,6 @@ print("=" * 80)
 
 
 # Investitionskosten insgesamt 
-
 invest_cost_stores      = network.stores.e_nom_opt * network.stores.capital_cost * network.stores.lifetime
 invest_cost_generators  = network.generators.p_nom_opt * network.generators.capital_cost * network.generators.lifetime
 invest_cost_links       = network.links.p_nom_opt * network.links.capital_cost * network.links.lifetime
@@ -194,8 +193,6 @@ print(df_invest_cost)
 print(f"\nInvestitionskosten insgesamt: {invest_cost:.2f} €")
 
 # Investitionskosten pro Jahr
-
-
 invest_cost_year_stores      = network.stores.e_nom_opt * network.stores.capital_cost 
 invest_cost_year_generators  = network.generators.p_nom_opt * network.generators.capital_cost 
 invest_cost_year_links       = network.links.p_nom_opt * network.links.capital_cost 

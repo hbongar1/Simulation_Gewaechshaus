@@ -170,6 +170,23 @@ print(f"Stromkosten:      {kosten_strom:>12.2f} €")
 print(f"Gaskosten:        {kosten_gas:>12.2f} €")
 print(f"Betriebskosten:   {operational_costs:>12.2f} €")
 
+# Jährliche Investitionskosten
+invest_cost_year_stores = network.stores.e_nom_opt * network.stores.capital_cost
+invest_cost_year_links  = network.links.p_nom_opt * network.links.capital_cost
+df_invest_cost_year     = pd.concat([invest_cost_year_stores, invest_cost_year_links]).fillna(0)
+invest_cost_year        = round(df_invest_cost_year.sum(), 2)
+
+print(f"\n--- Jährliche Investitionskosten ---")
+print(df_invest_cost_year)
+print(f"\nJährliche Investitionskosten: {invest_cost_year:.2f} €")
+
+# Gesamtkosten pro Jahr (= Betriebskosten + Investitions-Annuitäten)
+gesamt_kosten = operational_costs + invest_cost_year
+print(f"\n--- Gesamtkosten pro Jahr ---")
+print(f"Betriebskosten:               {operational_costs:>12.2f} €")
+print(f"Jährliche Investitionskosten:  {invest_cost_year:>12.2f} €")
+print(f"Gesamtkosten pro Jahr:         {gesamt_kosten:>12.2f} €")
+
 # Wärmespeicher
 print("\n--- Wärmespeicher ---")
 speicher_e = network.stores_t.e['Waermespeicher']
@@ -180,3 +197,4 @@ print(f"Minimum:          {speicher_e.min():>12.2f} kWh")
 print("\n" + "=" * 80)
 print("Optimierung erfolgreich abgeschlossen!")
 print("=" * 80)
+
