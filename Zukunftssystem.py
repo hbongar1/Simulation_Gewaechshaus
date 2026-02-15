@@ -101,7 +101,6 @@ network.set_snapshots(zeitindex)
 
 # Busse
 network.add('Bus', name='Strom', carrier='strom')
-network.add('Bus', name='Wind', carrier='wind')
 network.add('Bus', name='Waerme', carrier='waerme')
 
 
@@ -109,22 +108,15 @@ network.add('Bus', name='Waerme', carrier='waerme')
 network.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
 network.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 
-# Windkraftanlage -> Wind-Bus
+# Windkraftanlage -> Strom-Bus
 network.add('Generator',
             name='Windkraftanlage',
-            bus='Wind',
+            bus='Strom',
             p_nom_extendable=True,
             p_max_pu=wind_p_max_pu,
             capital_cost=capital_cost_wind,
             lifetime=wind_lifetime,
             carrier='wind')
-
-# Wind-Eigenverbrauch (Wind-Bus -> Strom-Bus)
-network.add('Link',
-            name='Wind_Eigenverbrauch',
-            bus0='Wind',
-            bus1='Strom',
-            p_nom_extendable=True)    #Problem war noch auf alter nennletung von windanlage
 
 # Speichen für Windenergie
 network.add('Store',

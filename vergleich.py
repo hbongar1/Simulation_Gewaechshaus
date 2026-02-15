@@ -50,8 +50,8 @@ windleistung = df_wind.loc[zeitindex, 'Wind_kW']
 
 print("KONVENTIONELLES SYSTEM - Optimierung läuft...")
 
-strom_preis = 0.25
-gas_preis = 0.08
+strom_preis = 0.1361
+gas_preis = 0.03
 
 n_konv = pypsa.Network()
 n_konv.set_snapshots(zeitindex)
@@ -64,16 +64,12 @@ n_konv.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
 n_konv.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 
 n_konv.add('Generator', name='Netz_Import', bus='Strom',
-           p_nom=10000, marginal_cost=strom_preis, carrier='grid')
+           p_nom=np.inf, marginal_cost=strom_preis, carrier='grid')
 n_konv.add('Generator', name='Gas_Versorgung', bus='Gas',
            p_nom=5000, marginal_cost=gas_preis, carrier='gas')
 
-n_konv.add('Store', name='Waermespeicher', bus='Waerme',
-           e_nom_extendable=True, capital_cost=10,
-           standing_loss=0.005, e_cyclic=True, lifetime=25)
-
 n_konv.add('Link', name='Gaskessel', bus0='Gas', bus1='Waerme',
-           p_nom=1500, efficiency=0.95,
+           p_nom_extendable=True, efficiency=0.95,
            capital_cost=7, lifetime=20)
 
 n_konv.optimize(solver_name='gurobi')
@@ -85,9 +81,7 @@ konv_strom_kosten = konv_strom_netz * strom_preis
 konv_gas_kosten = konv_gas_kessel * gas_preis
 konv_betriebskosten = konv_strom_kosten + konv_gas_kosten
 
-konv_invest_year_stores = n_konv.stores.e_nom_opt * n_konv.stores.capital_cost
-konv_invest_year_links  = n_konv.links.p_nom_opt * n_konv.links.capital_cost
-konv_invest_year = konv_invest_year_stores.sum() + konv_invest_year_links.sum()
+konv_invest_year = n_konv.links.p_nom_opt['Gaskessel'] * 7
 konv_gesamt_jahr = konv_betriebskosten + konv_invest_year
 
 # ============================================================
@@ -97,7 +91,7 @@ konv_gesamt_jahr = konv_betriebskosten + konv_invest_year
 print("ZUKUNFTSSYSTEM - Optimierung läuft...")
 
 wind_nennleistung_vergleich = 6000
-netz_import_kosten = 0.25
+netz_import_kosten = 0.1361
 
 wind_p_max_pu = (windleistung / wind_nennleistung_vergleich).clip(lower=0, upper=1)
 
@@ -267,8 +261,8 @@ fig, ax = plt.subplots(figsize=(10, 6))
 x = np.arange(2)
 breite = 0.5
 
-# Konventionell: Strom + Gas + Invest
-konv_stack = [konv_strom_kosten, konv_gas_kosten, konv_invest_year]
+# Konventionell: Strom + Gas (keine Invest)
+konv_stack = [konv_strom_kosten, konv_gas_kosten, 0]
 # Zukunft: Stromimport + Invest
 zuk_stack = [zuk_kosten_import, 0, zuk_invest_year]
 
@@ -280,7 +274,9 @@ p3 = ax.bar(x, [konv_stack[2], zuk_stack[2]], breite,
             color='#3498db', label='Investitionskosten (Annuität)')
 
 # Gesamtwerte oben anzeigen
-for i, total in enumerate([konv_gesamt_jahr, zuk_gesamt_jahr]):
+konv_total = konv_betriebskosten  # nur Betriebskosten
+zuk_total = zuk_gesamt_jahr
+for i, total in enumerate([konv_total, zuk_total]):
     ax.text(i, total + 20000, f'{total:,.0f} €', ha='center', fontsize=11, fontweight='bold')
 
 ax.set_xticks(x)

@@ -27,14 +27,7 @@ df_strombedarf.set_index('datetime', inplace=True)
 # 2. Parameter definieren
 # ============================================================
 
-# Wärmespeicher
-waermespeicher_kapazitaet = 5000            # kWh
-capital_cost_waermespeicher = 10             # €/kWh/a als Annuität
-waermespeicher_lifetime = 25                # Jahre
-waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
-
 # Gaskessel
-gaskessel_leistung = 1500                   # kW
 gaskessel_wirkungsgrad = 0.95               # 95%
 capital_cost_gaskessel = 7                  # €/kW/a als Annuität
 gaskessel_lifetime = 20                     # Jahre
@@ -88,7 +81,7 @@ network.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 network.add('Generator',
             name='Netz_Import',
             bus='Strom',
-            p_nom=10000,
+            p_nom=np.inf,
             marginal_cost=strom_preis,
             carrier='grid')
 
@@ -100,23 +93,12 @@ network.add('Generator',
             marginal_cost=gas_preis,
             carrier='gas')
 
-# Wärmespeicher
-network.add('Store',
-            name='Waermespeicher',
-            bus='Waerme',
-            e_nom=waermespeicher_kapazitaet,
-            e_nom_extendable=True,
-            capital_cost=capital_cost_waermespeicher,
-            standing_loss=waermespeicher_standing_loss,
-            e_cyclic=True,
-            lifetime=waermespeicher_lifetime)
-
 # Gaskessel (Gas -> Wärme)
 network.add('Link',
             name='Gaskessel',
             bus0='Gas',
             bus1='Waerme',
-            p_nom=gaskessel_leistung,
+            p_nom_extendable=True,
             efficiency=gaskessel_wirkungsgrad,
             capital_cost=capital_cost_gaskessel,
             lifetime=gaskessel_lifetime)
@@ -171,14 +153,11 @@ print(f"Gaskosten:        {kosten_gas:>12.2f} €")
 print(f"Betriebskosten:   {operational_costs:>12.2f} €")
 
 # Jährliche Investitionskosten
-invest_cost_year_stores = network.stores.e_nom_opt * network.stores.capital_cost
-invest_cost_year_links  = network.links.p_nom_opt * network.links.capital_cost
-df_invest_cost_year     = pd.concat([invest_cost_year_stores, invest_cost_year_links]).fillna(0)
-invest_cost_year        = round(df_invest_cost_year.sum(), 2)
+invest_cost_year_gaskessel = network.links.p_nom_opt['Gaskessel'] * capital_cost_gaskessel
+invest_cost_year = round(invest_cost_year_gaskessel, 2)
 
 print(f"\n--- Jährliche Investitionskosten ---")
-print(df_invest_cost_year)
-print(f"\nJährliche Investitionskosten: {invest_cost_year:.2f} €")
+print(f"Gaskessel:        {invest_cost_year:>12.2f} €")
 
 # Gesamtkosten pro Jahr (= Betriebskosten + Investitions-Annuitäten)
 gesamt_kosten = operational_costs + invest_cost_year
@@ -187,12 +166,7 @@ print(f"Betriebskosten:               {operational_costs:>12.2f} €")
 print(f"Jährliche Investitionskosten:  {invest_cost_year:>12.2f} €")
 print(f"Gesamtkosten pro Jahr:         {gesamt_kosten:>12.2f} €")
 
-# Wärmespeicher
-print("\n--- Wärmespeicher ---")
-speicher_e = network.stores_t.e['Waermespeicher']
-print(f"Durchschnitt:     {speicher_e.mean():>12.2f} kWh")
-print(f"Maximum:          {speicher_e.max():>12.2f} kWh")
-print(f"Minimum:          {speicher_e.min():>12.2f} kWh")
+
 
 print("\n" + "=" * 80)
 print("Optimierung erfolgreich abgeschlossen!")
