@@ -30,97 +30,31 @@ SOLAR_THRESHOLD = 100  # W/m²
 LIGHT_START_HOUR = 6
 LIGHT_END_HOUR = 20
 
-# Solareinstrahlung einlesen aus Solareinstrahlung_Bochum.csv
-# Spalte FG_LBERG enthält die Werte in J/(h*cm²)
-# Umrechnung: J/(h*cm²) * 10000/3600 = W/m²
-
-# Erst Bochum-Daten laden
-solar_data_bochum = {}
-with open('Solareinstrahlung_Bochum.csv', 'r', encoding='utf-8') as f:
-    # Erste Zeile überspringen (Header)
-    next(f)
-    for line in f:
-        parts = line.strip().split(';')
-        if len(parts) < 9:
-            continue
-        
-        # Datum im Format YYYYMMDDHH:MM
-        datum_str = parts[1]
-        try:
-            # Nur das Datum und die Stunde extrahieren (ersten 10 Zeichen)
-            timestamp = datetime.strptime(datum_str[:10], '%Y%m%d%H')
-            
-            # FG_LBERG Wert (Index 5)
-            fg_lberg_str = parts[5].replace(',', '.')
-            
-            # Wert speichern (auch -999, wird später behandelt)
-            solar_data_bochum[timestamp] = fg_lberg_str
-        except (ValueError, IndexError):
-            continue
-
-print(f"Bochum-Daten geladen: {len(solar_data_bochum)} Stunden")
-
-# Dann Bremen-Daten als Fallback laden
-solar_data_bremen = {}
-with open('Solareinstrahlung_Bremen.csv', 'r', encoding='utf-8') as f:
-    # Erste Zeile überspringen (Header)
-    next(f)
-    for line in f:
-        parts = line.strip().split(';')
-        if len(parts) < 9:
-            continue
-        
-        # Datum im Format YYYYMMDDHH:MM
-        datum_str = parts[1]
-        try:
-            # Nur das Datum und die Stunde extrahieren (ersten 10 Zeichen)
-            timestamp = datetime.strptime(datum_str[:10], '%Y%m%d%H')
-            
-            # FG_LBERG Wert (Index 5)
-            fg_lberg_str = parts[5].replace(',', '.')
-            
-            # Wert speichern
-            solar_data_bremen[timestamp] = fg_lberg_str
-        except (ValueError, IndexError):
-            continue
-
-print(f"Bremen-Daten geladen: {len(solar_data_bremen)} Stunden")
-
-# Kombinierte Solardaten erstellen: Bochum mit Bremen als Fallback
+# Solareinstrahlung einlesen aus bereinigter CSV
+# Diese Datei wurde mit prepare_solar_data.py erstellt
+# und enthält bereits die kombinierten Daten aus Bochum und Bremen
 solar_data = {}
-fallback_count = 0
-both_missing_count = 0
-last_valid_value = 0  # Startwert für den Fall, dass die ersten Werte fehlen
-
-# Timestamps sortieren für chronologische Verarbeitung
-sorted_timestamps = sorted(solar_data_bochum.keys())
-
-for timestamp in sorted_timestamps:
-    fg_lberg_str = solar_data_bochum[timestamp]
-    
-    # Wenn Bochum fehlerhaft (-999), versuche Bremen
-    if fg_lberg_str == '-999':
-        if timestamp in solar_data_bremen and solar_data_bremen[timestamp] != '-999':
-            fg_lberg_str = solar_data_bremen[timestamp]
-            fallback_count += 1
-        else:
-            # Auch Bremen hat keinen gültigen Wert - nutze vorherigen Wert
-            both_missing_count += 1
-            solar_data[timestamp] = last_valid_value
+with open('Solareinstrahlung_Bochum_Bremen.csv', 'r', encoding='utf-8') as f:
+    # Erste Zeile überspringen (Header)
+    next(f)
+    for line in f:
+        parts = line.strip().split(';')
+        if len(parts) < 2:
             continue
-    
-    # Umrechnung von J/(h*cm²) zu W/m²
-    try:
-        fg_lberg = float(fg_lberg_str)
-        solar_w_m2 = fg_lberg * 10000 / 3600  # W/m²
-        solar_data[timestamp] = solar_w_m2
-        last_valid_value = solar_w_m2  # Aktualisiere letzten gültigen Wert
-    except ValueError:
-        solar_data[timestamp] = last_valid_value
+        
+        # Datum im Format YYYYMMDDHH
+        datum_str = parts[0]
+        try:
+            timestamp = datetime.strptime(datum_str, '%Y%m%d%H')
+            
+            # Solar_W_m2 Wert (bereits in W/m² umgerechnet)
+            solar_w_m2 = float(parts[1].replace(',', '.'))
+            
+            solar_data[timestamp] = solar_w_m2
+        except (ValueError, IndexError):
+            continue
 
-print(f"Kombinierte Solareinstrahlung-Daten: {len(solar_data)} Stunden")
-print(f"Davon {fallback_count} Werte aus Bremen-Daten ergänzt")
-print(f"Beide Dateien haben -999: {both_missing_count} Mal (vorheriger Wert verwendet)")
+print(f"Solareinstrahlung-Daten geladen: {len(solar_data)} Stunden")
 
 # Stündliche Energieverbrauchsdaten berechnen
 results = []
