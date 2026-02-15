@@ -40,8 +40,8 @@ capital_cost_gaskessel = 7                  # €/kW/a als Annuität
 gaskessel_lifetime = 20                     # Jahre
 
 # Netzstrom
-strom_preis = 0.25                          # €/kWh
-gas_preis = 0.08                            # €/kWh
+strom_preis = 0.1361                          # €/kWh
+gas_preis = 0.03                            # €/kWh
 
 # ============================================================
 # 3. Daten vorbereiten
