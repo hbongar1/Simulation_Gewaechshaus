@@ -89,7 +89,7 @@ network.add('Generator',
 network.add('Generator',
             name='Gas_Versorgung',
             bus='Gas',
-            p_nom=5000,
+            p_nom=np.inf,
             marginal_cost=gas_preis,
             carrier='gas')
 

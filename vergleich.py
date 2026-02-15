@@ -66,7 +66,7 @@ n_konv.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 n_konv.add('Generator', name='Netz_Import', bus='Strom',
            p_nom=np.inf, marginal_cost=strom_preis, carrier='grid')
 n_konv.add('Generator', name='Gas_Versorgung', bus='Gas',
-           p_nom=5000, marginal_cost=gas_preis, carrier='gas')
+           p_nom=np.inf, marginal_cost=gas_preis, carrier='gas')
 
 n_konv.add('Link', name='Gaskessel', bus0='Gas', bus1='Waerme',
            p_nom_extendable=True, efficiency=0.95,
@@ -99,18 +99,14 @@ n_zuk = pypsa.Network()
 n_zuk.set_snapshots(zeitindex)
 
 n_zuk.add('Bus', name='Strom', carrier='strom')
-n_zuk.add('Bus', name='Wind', carrier='wind')
 n_zuk.add('Bus', name='Waerme', carrier='waerme')
 
 n_zuk.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
 n_zuk.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 
-n_zuk.add('Generator', name='Windkraftanlage', bus='Wind',
+n_zuk.add('Generator', name='Windkraftanlage', bus='Strom',
           p_nom_extendable=True, p_max_pu=wind_p_max_pu,
           capital_cost=150, lifetime=20, carrier='wind')
-
-n_zuk.add('Link', name='Wind_Eigenverbrauch', bus0='Wind', bus1='Strom',
-          p_nom_extendable=True)
 
 n_zuk.add('Store', name='Stromspeicher', bus='Strom',
           e_nom_extendable=True, capital_cost=45,
@@ -132,7 +128,6 @@ n_zuk.optimize(solver_name='gurobi')
 # Ergebnisse Zukunft
 zuk_strom_import = n_zuk.generators_t.p['Netz_Import'].sum()
 zuk_strom_wind = n_zuk.generators_t.p['Windkraftanlage'].sum()
-zuk_strom_eigen = n_zuk.links_t.p0['Wind_Eigenverbrauch'].sum()
 zuk_kosten_import = zuk_strom_import * netz_import_kosten
 
 zuk_invest_year_stores = n_zuk.stores.e_nom_opt * n_zuk.stores.capital_cost
