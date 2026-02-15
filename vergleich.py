@@ -202,11 +202,12 @@ plt.show()
 # --- Plot 3: Windenergie-Leistungskurve über das Jahr ---
 fig, ax = plt.subplots(figsize=(14, 5))
 wind_erzeugung = n_zuk.generators_t.p['Windkraftanlage']
-wind_erzeugung.plot(ax=ax, color='#3498db', alpha=0.7, linewidth=0.5, label='Windkraft-Erzeugung')
+ax.plot(wind_erzeugung.index, wind_erzeugung.values, color='#3498db', alpha=0.7, linewidth=0.5, label='Windkraft-Erzeugung')
 ax.set_ylabel('Leistung [kW]')
 ax.set_xlabel('Zeit')
 ax.set_title('Windkraftanlage – Erzeugte Leistung über das Jahr')
 ax.legend(loc='upper right')
+ax.xaxis.set_major_locator(mdates.MonthLocator())
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
 plt.tight_layout()
 plt.savefig('plot_wind_leistungskurve.png', dpi=150)
@@ -218,18 +219,19 @@ fig, ax = plt.subplots(figsize=(14, 5))
 wind_daily = wind_erzeugung.resample('D').mean()
 verbrauch_daily = (strombedarf + n_zuk.links_t.p0['Waermepumpe']).resample('D').mean()
 
-wind_daily.plot(ax=ax, color='#3498db', linewidth=1.5, label='Windkraft-Erzeugung')
-verbrauch_daily.plot(ax=ax, color='#e74c3c', linewidth=1.5, label='Gesamtverbrauch (Strom + WP)')
-ax.fill_between(wind_daily.index, wind_daily, verbrauch_daily,
-                where=wind_daily > verbrauch_daily, alpha=0.3, color='green',
-                label='Überschuss → Speicher')
-ax.fill_between(wind_daily.index, wind_daily, verbrauch_daily,
-                where=wind_daily < verbrauch_daily, alpha=0.3, color='red',
-                label='Defizit → Netz/Speicher')
+ax.plot(wind_daily.index, wind_daily.values, color='#3498db', linewidth=1.5, label='Windkraft-Erzeugung')
+ax.plot(verbrauch_daily.index, verbrauch_daily.values, color='#e74c3c', linewidth=1.5, label='Gesamtverbrauch (Strom + WP)')
+ax.fill_between(wind_daily.index, wind_daily.values, verbrauch_daily.values,
+                where=wind_daily.values > verbrauch_daily.values, alpha=0.3, color='green',
+                label='Wind > Verbrauch')
+ax.fill_between(wind_daily.index, wind_daily.values, verbrauch_daily.values,
+                where=wind_daily.values < verbrauch_daily.values, alpha=0.3, color='red',
+                label='Verbrauch > Wind (Netzimport)')
 ax.set_ylabel('Leistung [kW] (Tagesmittel)')
 ax.set_xlabel('Zeit')
 ax.set_title('Windproduktion vs. Gewächshaus-Verbrauch (Tagesmittel)')
 ax.legend(loc='upper right')
+ax.xaxis.set_major_locator(mdates.MonthLocator())
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
 plt.tight_layout()
 plt.savefig('plot_wind_vs_verbrauch.png', dpi=150)
@@ -238,16 +240,20 @@ plt.show()
 # --- Plot 5: Speicher-Füllstand ---
 fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
 
-n_zuk.stores_t.e['Stromspeicher'].plot(ax=axes[0], color='#3498db', linewidth=0.8)
+strom_speicher = n_zuk.stores_t.e['Stromspeicher']
+axes[0].plot(strom_speicher.index, strom_speicher.values, color='#3498db', linewidth=0.8)
 axes[0].set_ylabel('Energie [kWh]')
 axes[0].set_title('Stromspeicher – Füllstand über das Jahr')
-axes[0].xaxis.set_major_formatter(mdates.DateFormatter('%b'))
 
-n_zuk.stores_t.e['Waermespeicher'].plot(ax=axes[1], color='#e74c3c', linewidth=0.8)
+waerme_speicher = n_zuk.stores_t.e['Waermespeicher']
+axes[1].plot(waerme_speicher.index, waerme_speicher.values, color='#e74c3c', linewidth=0.8)
 axes[1].set_ylabel('Energie [kWh]')
 axes[1].set_xlabel('Zeit')
 axes[1].set_title('Wärmespeicher – Füllstand über das Jahr')
-axes[1].xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+
+for a in axes:
+    a.xaxis.set_major_locator(mdates.MonthLocator())
+    a.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
 
 plt.tight_layout()
 plt.savefig('plot_speicher_fuellstand.png', dpi=150)
