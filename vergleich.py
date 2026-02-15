@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import locale
+locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
 # ============================================================
 # 1. Gemeinsame Daten einlesen

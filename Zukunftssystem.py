@@ -62,8 +62,6 @@ waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
 # Netzinteraktion
 netz_import_kosten = 0.25       # €/kWh
-netz_export_erloese = 0         # €/kWh
-
 
 # ============================================================
 # 3. Daten vorbereiten
@@ -105,6 +103,7 @@ network.set_snapshots(zeitindex)
 network.add('Bus', name='Strom', carrier='strom')
 network.add('Bus', name='Wind', carrier='wind')
 network.add('Bus', name='Waerme', carrier='waerme')
+
 
 # Lasten
 network.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
@@ -182,62 +181,72 @@ print("=" * 80)
 
 
 # Investitionskosten insgesamt 
-invest_cost_stores      = network.stores.e_nom_opt * network.stores.capital_cost * network.stores.lifetime
-invest_cost_generators  = network.generators.p_nom_opt * network.generators.capital_cost * network.generators.lifetime
-invest_cost_links       = network.links.p_nom_opt * network.links.capital_cost * network.links.lifetime
-df_invest_cost          = pd.concat([invest_cost_stores, invest_cost_generators, invest_cost_links]).fillna(0)
-invest_cost             = round(df_invest_cost.sum(), 2)
+invest_cost_stromspeicher    = network.stores.e_nom_opt['Stromspeicher'] * capital_cost_stromspeicher * stromspeicher_lifetime
+invest_cost_waermespeicher   = network.stores.e_nom_opt['Waermespeicher'] * capital_cost_waermespeicher * waermespeicher_lifetime
+invest_cost_windkraftanlage  = network.generators.p_nom_opt['Windkraftanlage'] * capital_cost_wind * wind_lifetime 
+invest_cost_waermepumpe      = network.links.p_nom_opt['Waermepumpe'] * capital_cost_wp * wp_lifetime
+invest_cost_gesamt = invest_cost_stromspeicher + invest_cost_waermespeicher + invest_cost_windkraftanlage + invest_cost_waermepumpe 
 
 print(f"\n--- Investitionskosten insgesamt ---")
-print(df_invest_cost)
-print(f"\nInvestitionskosten insgesamt: {invest_cost:.2f} €")
+print(f'Stromspeicher:  {invest_cost_stromspeicher:>12.2f} €')
+print(f'Wärmespeicher:  {invest_cost_waermespeicher:>12.2f} €')
+print(f'Windkraftanlage:{invest_cost_windkraftanlage:>12.2f} €')
+print(f'Wärmepumpe:     {invest_cost_waermepumpe:>12.2f} €')
+print(f"\nInvestitionskosten insgesamt: {invest_cost_gesamt:.2f} €")
 
 # Investitionskosten pro Jahr
-invest_cost_year_stores      = network.stores.e_nom_opt * network.stores.capital_cost 
-invest_cost_year_generators  = network.generators.p_nom_opt * network.generators.capital_cost 
-invest_cost_year_links       = network.links.p_nom_opt * network.links.capital_cost 
-df_invest_cost_year          = pd.concat([invest_cost_year_stores, invest_cost_year_generators, invest_cost_year_links]).fillna(0)
-invest_cost_year             = round(df_invest_cost_year.sum(), 2)
+invest_cost_stromspeicher_year    = network.stores.e_nom_opt['Stromspeicher'] * capital_cost_stromspeicher 
+invest_cost_waermespeicher_year   = network.stores.e_nom_opt['Waermespeicher'] * capital_cost_waermespeicher
+invest_cost_windkraftanlage_year  = network.generators.p_nom_opt['Windkraftanlage'] * capital_cost_wind
+invest_cost_waermepumpe_year      = network.links.p_nom_opt['Waermepumpe'] * capital_cost_wp
+invest_cost_gesamt_year = invest_cost_stromspeicher_year + invest_cost_waermespeicher_year + invest_cost_windkraftanlage_year + invest_cost_waermepumpe_year 
 
-print(f"\n--- Jährliche Investitionskosten ---")
-print(df_invest_cost_year)
-print(f"\nJährliche Investitionskosten: {invest_cost_year:.2f} €")
-
+print(f"\n--- Investitionskosten jährlich ---")
+print(f'Stromspeicher:  {invest_cost_stromspeicher_year:>12.2f} €')
+print(f'Wärmespeicher:  {invest_cost_waermespeicher_year:>12.2f} €')
+print(f'Windkraftanlage:{invest_cost_windkraftanlage_year:>12.2f} €')
+print(f'Wärmepumpe:     {invest_cost_waermepumpe_year:>12.2f} €')
+print(f"\nInvestitionskosten jährlich: {invest_cost_gesamt_year:.2f} €")
 
 # Optimierte Leistung
 print("\n--- Optimierte Leistung ---")
 wind_opt = network.generators.p_nom_opt['Windkraftanlage']
-print(f"Windanlage:       {wind_opt:>12.2f} kW ")
+print(f"Windanlage:        {wind_opt:>12.2f} kW ")
 waermepume_opt = network.links.p_nom_opt['Waermepumpe']
-print(f"Wärmepumpe:       {waermepume_opt:>12.2f} kW")
+print(f"Wärmepumpe:        {waermepume_opt:>12.2f} kW")
 
 # Optimierte Speicherkapazität
 stormspeicher_opt = network.stores.e_nom_opt['Stromspeicher']
-print(f"Stromspeicher:       {stormspeicher_opt:>12.2f} kWh")
+print(f"Stromspeicher:     {stormspeicher_opt:>12.2f} kWh")
 waermespeicher_opt = network.stores.e_nom_opt['Waermespeicher']
-print(f"Wärmespeicher:       {waermespeicher_opt:>12.2f} kWh")
+print(f"Wärmespeicher:     {waermespeicher_opt:>12.2f} kWh")
 
 
 # Strombilanz
 print("\n--- Strombilanz ---")
 strom_wind_gesamt = network.generators_t.p['Windkraftanlage'].sum()
-strom_wind_eigen = network.links_t.p0['Wind_Eigenverbrauch'].sum()
+
+p_store = network.stores_t.p["Stromspeicher"]   # kW
+energie_in_speicher  = ((-p_store).clip(lower=0)).sum() 
+
 strom_netz_import = network.generators_t.p['Netz_Import'].sum()
 strom_wp = network.links_t.p0['Waermepumpe'].sum()
 strom_last = network.loads_t.p['Stromlast'].sum()
 
-print(f"Windkraft gesamt: {strom_wind_gesamt:>12.2f} kWh")
-print(f"  Eigenverbrauch: {strom_wind_eigen:>12.2f} kWh")
-print(f"Netz Import:      {strom_netz_import:>12.2f} kWh")
-print(f"Wärmepumpe:       {strom_wp:>12.2f} kWh")
-print(f"Stromlast:        {strom_last:>12.2f} kWh")
+
+print(f"Windkraft gesamt:                   {strom_wind_gesamt:>12.2f} kWh")
+print(f'Energie die in den Speicher fließt: {energie_in_speicher:>12.2f} kWh')
+print(f"Netz Import:                        {strom_netz_import:>12.2f} kWh")
+print(f"Wärmepumpe:                         {strom_wp:>12.2f} kWh")
+print(f"Stromlast:                          {strom_last:>12.2f} kWh")
+
 
 
 # Gesamtkosten Gewächshaus für ein Jahr 
 print("\n--- Gesamtkosten pro Jahr ---")
 kosten_strom_import = strom_netz_import * netz_import_kosten
 gesamt_kosten_gewaechshaus = kosten_strom_import + invest_cost_year
-print(f"Stromimportkosten:            {kosten_strom_import:>12.2f} €")
+print(f"Stromimportkosten:             {kosten_strom_import:>12.2f} €")
 print(f"Jährliche Investitionskosten:  {invest_cost_year:>12.2f} €")
 print(f"Gesamtkosten pro Jahr:         {gesamt_kosten_gewaechshaus:>12.2f} €")
 
@@ -259,6 +268,15 @@ print(f"Stromautarkie:    {autarkie_strom:>12.2f} %")
 
 mittlerer_cop = abs(waerme_wp / strom_wp) if strom_wp > 0 else 0
 print(f"Realisierter COP: {mittlerer_cop:>12.2f}")
+
+# Nicht genutzte Windenergie
+windenergie_möglich = (network.generators.p_nom_opt['Windkraftanlage'] * wind_p_max_pu).sum()
+windenergie_nicht_genutzt = windenergie_möglich - strom_wind_gesamt
+windenergie_genutzt_prozent = (strom_wind_gesamt) / windenergie_möglich * 100
+
+print("\n--- Auslastung der Windkraftanlage ---")
+print(f'Nicht genutzte Windenergie: {windenergie_nicht_genutzt:.2f} kWh')
+print(f'Nur {windenergie_genutzt_prozent:.2f} % der möglichen Energie der Windkraftanlage wird genutzt')
 
 print("\n" + "=" * 80)
 print("Optimierung erfolgreich abgeschlossen!")
