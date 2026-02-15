@@ -29,8 +29,6 @@ df_strombedarf.set_index('datetime', inplace=True)
 
 # Gaskessel
 gaskessel_wirkungsgrad = 0.95               # 95%
-capital_cost_gaskessel = 7                  # €/kW/a als Annuität
-gaskessel_lifetime = 20                     # Jahre
 
 # Netzstrom
 strom_preis = 0.1361                          # €/kWh
@@ -99,9 +97,7 @@ network.add('Link',
             bus0='Gas',
             bus1='Waerme',
             p_nom_extendable=True,
-            efficiency=gaskessel_wirkungsgrad,
-            capital_cost=capital_cost_gaskessel,
-            lifetime=gaskessel_lifetime)
+            efficiency=gaskessel_wirkungsgrad)
 
 # ============================================================
 # 5. Optimierung mit Gurobi
@@ -152,18 +148,10 @@ print(f"Stromkosten:      {kosten_strom:>12.2f} €")
 print(f"Gaskosten:        {kosten_gas:>12.2f} €")
 print(f"Betriebskosten:   {operational_costs:>12.2f} €")
 
-# Jährliche Investitionskosten
-invest_cost_year_gaskessel = network.links.p_nom_opt['Gaskessel'] * capital_cost_gaskessel
-invest_cost_year = round(invest_cost_year_gaskessel, 2)
-
-print(f"\n--- Jährliche Investitionskosten ---")
-print(f"Gaskessel:        {invest_cost_year:>12.2f} €")
-
-# Gesamtkosten pro Jahr (= Betriebskosten + Investitions-Annuitäten)
-gesamt_kosten = operational_costs + invest_cost_year
+# Gesamtkosten pro Jahr (= Betriebskosten)
+gesamt_kosten = operational_costs 
 print(f"\n--- Gesamtkosten pro Jahr ---")
 print(f"Betriebskosten:               {operational_costs:>12.2f} €")
-print(f"Jährliche Investitionskosten:  {invest_cost_year:>12.2f} €")
 print(f"Gesamtkosten pro Jahr:         {gesamt_kosten:>12.2f} €")
 
 
