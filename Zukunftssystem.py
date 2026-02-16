@@ -60,8 +60,8 @@ capital_cost_waermespeicher = 5              # €/kWh/a als Annuität
 waermespeicher_lifetime = 25                # Jahre
 waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
-# Netzinteraktion
-netz_import_kosten = 0.1361     # €/kWh
+# Stromnetz
+netz_import_kosten = 0.1361   # €/kWh
 
 # ============================================================
 # 3. Daten vorbereiten
@@ -72,6 +72,7 @@ zeitindex = df_heizlast.index.intersection(df_strombedarf.index)
 zeitindex = zeitindex.intersection(df_cop.index)
 zeitindex = zeitindex.intersection(df_wind.index)
 
+print(f"\n")
 print(f"Simulationszeitraum: {zeitindex[0]} bis {zeitindex[-1]}")
 print(f"Anzahl Zeitschritte: {len(zeitindex)}")
 
@@ -91,6 +92,7 @@ print(f"Maximale Heizlast:      {waermebedarf.max():.2f} kW")
 print(f"Mittlerer Strombedarf:  {strombedarf.mean():.2f} kW")
 print(f"Maximaler Strombedarf:  {strombedarf.max():.2f} kW")
 print(f"Mittlerer COP:          {cop_zeitreihe.mean():.2f}")
+print(f"\n")
 
 # ============================================================
 # 4. PyPSA-Netzwerk erstellen
@@ -153,7 +155,7 @@ network.add('Store',
 network.add('Generator',
             name='Netz_Import',
             bus='Strom',
-            p_nom=np.inf,
+            p_nom_extendable=True,
             marginal_cost=netz_import_kosten,
             carrier='grid')
 
@@ -271,3 +273,5 @@ print(f'Nur {windenergie_genutzt_prozent:.2f} % der möglichen Energie der Windk
 print("\n" + "=" * 80)
 print("Optimierung erfolgreich abgeschlossen!")
 print("=" * 80)
+print(f"\n")
+

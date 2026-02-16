@@ -35,10 +35,6 @@ gas_preis = 0.03                            # €/kWh
 gaskessel_wirkungsgrad = 0.95               # 95%
 gas_cost_heat = gas_preis/gaskessel_wirkungsgrad
 
-#Kosten Netzanschluss
-capital_cost_netzanschluss =100  # €/kW*a
-
-
 # ============================================================
 # 3. Daten vorbereiten
 # ============================================================
@@ -84,16 +80,15 @@ network.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 
 # Netzstrom (Import aus öffentlichem Netz)
 network.add('Generator',
-            name='Netz_Import',
+            name='Stromimport',
             bus='Strom',
-            p_nom = strombedarf.max(),
+            p_nom = np.inf,
             marginal_cost=strom_preis,
-            capital_cost=capital_cost_netzanschluss,
             carrier='grid')
 
 # Gasversorgung
 network.add('Generator',
-            name='Gasversorgung',
+            name='Gasimport',
             bus='Gas',
             p_nom = np.inf,
             marginal_cost=gas_preis,
@@ -102,8 +97,8 @@ network.add('Generator',
 # Gaskessel
 network.add("Link",
             name="Gaskessel",
-            bus0="Gas",        # Input: Gas
-            bus1="Waerme",     # Output: Wärme
+            bus0="Gas",        
+            bus1="Waerme",     
             p_nom=waermebedarf.max()/gaskessel_wirkungsgrad,
             efficiency=gaskessel_wirkungsgrad,
             carrier="gas")
@@ -124,33 +119,30 @@ print("=" * 80)
 
 # Nennleisungen 
 p_nom_gaskessel = waermebedarf.max()/gaskessel_wirkungsgrad
-p_nom_netz_import = strombedarf.max()
-print(f"\nNennleistung Gaskessel:     {p_nom_gaskessel:>12.2f} kW")
-print(f"Nennleistung Netzanschluss: {p_nom_netz_import:>12.2f} kW")
+print(f"\nNennleistung Gaskessel: {p_nom_gaskessel:>12.2f} kW")
+
 
 # Strombilanz
 print("\n--- Strombilanz ---")
-strom_netz = network.generators_t.p['Netz_Import'].sum()
+strom_netz = network.generators_t.p['Stromimport'].sum()
 strom_last = network.loads_t.p['Stromlast'].sum()
-print(f"Netzbezug:        {strom_netz:>12.2f} kWh")
+print(f"Netzimport:       {strom_netz:>12.2f} kWh")
 print(f"Stromlast:        {strom_last:>12.2f} kWh")
 
 # Wärmebilanz
 print("\n--- Wärmebilanz ---")
-gas_versorgung = network.generators_t.p['Gasversorgung'].sum()
+gas_versorgung = network.generators_t.p['Gasimport'].sum()
 
 waerme_last = network.loads_t.p['Waermelast'].sum()
-print(f"Gasversorgung:    {gas_versorgung:>12.2f} kWh")
-print(f"Wärmelast:        {waerme_last:>12.2f} kWh")
+print(f"Gasimport:    {gas_versorgung:>12.2f} kWh")
+print(f"Wärmelast:    {waerme_last:>12.2f} kWh")
 
 # Betriebskosten
 print("\n--- Betriebskosten pro Jahr ---")
 kosten_strom = strom_netz * strom_preis
 kosten_gas = gas_versorgung * gas_cost_heat
-kosten_netzanschluss = capital_cost_netzanschluss * p_nom_netz_import
-operational_costs = round(kosten_strom + kosten_gas + kosten_netzanschluss, 2)
+operational_costs = round(kosten_strom + kosten_gas, 2)
 print(f"Stromkosten:          {kosten_strom:>12.2f} €")
 print(f"Gaskosten:            {kosten_gas:>12.2f} €")
-print(f"Netzanschlusskosten:  {kosten_netzanschluss:>12.2f} €")
 print(f"Betriebskosten:       {operational_costs:>12.2f} €")
 print(f"\n")
