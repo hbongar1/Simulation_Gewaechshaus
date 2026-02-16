@@ -76,6 +76,7 @@ network.set_snapshots(zeitindex)
 # Busse
 network.add('Bus', name='Strom', carrier='strom')
 network.add('Bus', name='Waerme', carrier='waerme')
+network.add('Bus', 'Gas', carrier='gas')
 
 # Lasten
 network.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
@@ -92,11 +93,20 @@ network.add('Generator',
 
 # Gasversorgung
 network.add('Generator',
-            name='Gaskessel',
-            bus='Waerme',
-            p_nom = waermebedarf.max(),
-            marginal_cost=gas_cost_heat,
+            name='Gasversorgung',
+            bus='Gas',
+            p_nom = np.inf,
+            marginal_cost=gas_preis,
             carrier='gas')
+
+# Gaskessel
+network.add("Link",
+            name="Gaskessel",
+            bus0="Gas",        # Input: Gas
+            bus1="Waerme",     # Output: Wärme
+            p_nom=waermebedarf.max()/gaskessel_wirkungsgrad,
+            efficiency=gaskessel_wirkungsgrad,
+            carrier="gas")
 
 # ============================================================
 # 5. Optimierung mit Gurobi
@@ -113,7 +123,7 @@ print("ERGEBNISSE")
 print("=" * 80)
 
 # Nennleisungen 
-p_nom_gaskessel = waermebedarf.max()
+p_nom_gaskessel = waermebedarf.max()/gaskessel_wirkungsgrad
 p_nom_netz_import = strombedarf.max()
 print(f"\nNennleistung Gaskessel:     {p_nom_gaskessel:>12.2f} kW")
 print(f"Nennleistung Netzanschluss: {p_nom_netz_import:>12.2f} kW")
@@ -127,15 +137,16 @@ print(f"Stromlast:        {strom_last:>12.2f} kWh")
 
 # Wärmebilanz
 print("\n--- Wärmebilanz ---")
-gas_kessel = network.generators_t.p['Gaskessel'].sum()
+gas_versorgung = network.generators_t.p['Gasversorgung'].sum()
+
 waerme_last = network.loads_t.p['Waermelast'].sum()
-print(f"Gaskessel:        {gas_kessel:>12.2f} kWh")
+print(f"Gasversorgung:    {gas_versorgung:>12.2f} kWh")
 print(f"Wärmelast:        {waerme_last:>12.2f} kWh")
 
 # Betriebskosten
 print("\n--- Betriebskosten pro Jahr ---")
 kosten_strom = strom_netz * strom_preis
-kosten_gas = gas_kessel * gas_cost_heat
+kosten_gas = gas_versorgung * gas_cost_heat
 kosten_netzanschluss = capital_cost_netzanschluss * p_nom_netz_import
 operational_costs = round(kosten_strom + kosten_gas + kosten_netzanschluss, 2)
 print(f"Stromkosten:          {kosten_strom:>12.2f} €")
