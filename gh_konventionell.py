@@ -27,12 +27,17 @@ df_strombedarf.set_index('datetime', inplace=True)
 # 2. Parameter definieren
 # ============================================================
 
-# Gaskessel
-gaskessel_wirkungsgrad = 0.95               # 95%
-
 # Netzstrom
 strom_preis = 0.1361                          # €/kWh
 gas_preis = 0.03                            # €/kWh
+
+# Gaskessel
+gaskessel_wirkungsgrad = 0.95               # 95%
+gas_cost_heat = gas_preis/gaskessel_wirkungsgrad
+
+#Kosten Netzanschluss
+capital_cost_netzanschluss =100  # €/kW*a
+
 
 # ============================================================
 # 3. Daten vorbereiten
@@ -45,6 +50,7 @@ zeitindex = df_heizlast.index.intersection(df_strombedarf.index)
 # Kommentiere die nächste Zeile aus, um das ganze Jahr zu simulieren
 # zeitindex = zeitindex[:168]  # 1 Woche
 
+print(f"\n")
 print(f"Simulationszeitraum: {zeitindex[0]} bis {zeitindex[-1]}")
 print(f"Anzahl Zeitschritte: {len(zeitindex)}")
 
@@ -53,12 +59,13 @@ waermebedarf = df_heizlast.loc[zeitindex, 'Heizlast_kW']
 strombedarf = df_strombedarf.loc[zeitindex, 'Energy_kW']
 
 # Datenübersicht
-print(f"\nMittlere Heizlast:      {waermebedarf.mean():.2f} kW")
-print(f"Maximale Heizlast:      {waermebedarf.max():.2f} kW")
-print(f"Minimale Heizlast:      {waermebedarf.min():.2f} kW")
-print(f"Mittlerer Strombedarf:  {strombedarf.mean():.2f} kW")
-print(f"Maximaler Strombedarf:  {strombedarf.max():.2f} kW")
-
+print(f"\nMittlere Heizlast:     {waermebedarf.mean():>12.2f} kW")
+print(f"Maximale Heizlast:     {waermebedarf.max():>12.2f} kW")
+print(f"Minimale Heizlast:     {waermebedarf.min():>12.2f} kW")
+print(f"Mittlerer Strombedarf: {strombedarf.mean():>12.2f} kW")
+print(f"Maximaler Strombedarf: {strombedarf.max():>12.2f} kW")
+print(f"Minimale Strombedarf:  {strombedarf.min():>12.2f} kW")
+print(f"\n")
 # ============================================================
 # 4. PyPSA-Netzwerk erstellen
 # ============================================================
@@ -69,7 +76,6 @@ network.set_snapshots(zeitindex)
 # Busse
 network.add('Bus', name='Strom', carrier='strom')
 network.add('Bus', name='Waerme', carrier='waerme')
-network.add('Bus', name='Gas', carrier='gas')
 
 # Lasten
 network.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
@@ -79,25 +85,18 @@ network.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 network.add('Generator',
             name='Netz_Import',
             bus='Strom',
-            p_nom=np.inf,
+            p_nom = strombedarf.max(),
             marginal_cost=strom_preis,
+            capital_cost=capital_cost_netzanschluss,
             carrier='grid')
 
 # Gasversorgung
 network.add('Generator',
-            name='Gas_Versorgung',
-            bus='Gas',
-            p_nom=np.inf,
-            marginal_cost=gas_preis,
-            carrier='gas')
-
-# Gaskessel (Gas -> Wärme)
-network.add('Link',
             name='Gaskessel',
-            bus0='Gas',
-            bus1='Waerme',
-            p_nom_extendable=True,
-            efficiency=gaskessel_wirkungsgrad)
+            bus='Waerme',
+            p_nom = waermebedarf.max(),
+            marginal_cost=gas_cost_heat,
+            carrier='gas')
 
 # ============================================================
 # 5. Optimierung mit Gurobi
@@ -110,53 +109,37 @@ network.optimize(solver_name='gurobi')
 # ============================================================
 
 print("\n" + "=" * 80)
-print("OPTIMIERUNGSERGEBNISSE")
+print("ERGEBNISSE")
 print("=" * 80)
 
-# Gesamtkosten
-print(f"\nGesamtkosten: {network.objective:.2f} €")
+# Nennleisungen 
+p_nom_gaskessel = waermebedarf.max()
+p_nom_netz_import = strombedarf.max()
+print(f"\nNennleistung Gaskessel:     {p_nom_gaskessel:>12.2f} kW")
+print(f"Nennleistung Netzanschluss: {p_nom_netz_import:>12.2f} kW")
 
 # Strombilanz
 print("\n--- Strombilanz ---")
 strom_netz = network.generators_t.p['Netz_Import'].sum()
 strom_last = network.loads_t.p['Stromlast'].sum()
-
 print(f"Netzbezug:        {strom_netz:>12.2f} kWh")
 print(f"Stromlast:        {strom_last:>12.2f} kWh")
 
 # Wärmebilanz
 print("\n--- Wärmebilanz ---")
-waerme_kessel = network.links_t.p1['Gaskessel'].sum()
+gas_kessel = network.generators_t.p['Gaskessel'].sum()
 waerme_last = network.loads_t.p['Waermelast'].sum()
-
-print(f"Gaskessel Wärme:  {waerme_kessel:>12.2f} kWh")
+print(f"Gaskessel:        {gas_kessel:>12.2f} kWh")
 print(f"Wärmelast:        {waerme_last:>12.2f} kWh")
 
-# Gasverbrauch
-print("\n--- Gasverbrauch ---")
-gas_kessel = network.links_t.p0['Gaskessel'].sum()
-
-print(f"Gas Kessel:       {gas_kessel:>12.2f} kWh")
-
 # Betriebskosten
-print("\n--- Betriebskosten ---")
+print("\n--- Betriebskosten pro Jahr ---")
 kosten_strom = strom_netz * strom_preis
-kosten_gas = gas_kessel * gas_preis
-operational_costs = round(kosten_strom + kosten_gas, 2)
-
-print(f"Stromkosten:      {kosten_strom:>12.2f} €")
-print(f"Gaskosten:        {kosten_gas:>12.2f} €")
-print(f"Betriebskosten:   {operational_costs:>12.2f} €")
-
-# Gesamtkosten pro Jahr (= Betriebskosten)
-gesamt_kosten = operational_costs 
-print(f"\n--- Gesamtkosten pro Jahr ---")
-print(f"Betriebskosten:               {operational_costs:>12.2f} €")
-print(f"Gesamtkosten pro Jahr:         {gesamt_kosten:>12.2f} €")
-
-
-
-print("\n" + "=" * 80)
-print("Optimierung erfolgreich abgeschlossen!")
-print("=" * 80)
-
+kosten_gas = gas_kessel * gas_cost_heat
+kosten_netzanschluss = capital_cost_netzanschluss * p_nom_netz_import
+operational_costs = round(kosten_strom + kosten_gas + kosten_netzanschluss, 2)
+print(f"Stromkosten:          {kosten_strom:>12.2f} €")
+print(f"Gaskosten:            {kosten_gas:>12.2f} €")
+print(f"Netzanschlusskosten:  {kosten_netzanschluss:>12.2f} €")
+print(f"Betriebskosten:       {operational_costs:>12.2f} €")
+print(f"\n")

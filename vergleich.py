@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as mticker
 import locale
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
@@ -52,37 +53,35 @@ print("KONVENTIONELLES SYSTEM - Optimierung läuft...")
 
 strom_preis = 0.1361
 gas_preis = 0.03
+gaskessel_wirkungsgrad = 0.95
+gas_cost_heat = gas_preis / gaskessel_wirkungsgrad
+capital_cost_netzanschluss = 100  # €/kW*a
 
 n_konv = pypsa.Network()
 n_konv.set_snapshots(zeitindex)
 
 n_konv.add('Bus', name='Strom', carrier='strom')
 n_konv.add('Bus', name='Waerme', carrier='waerme')
-n_konv.add('Bus', name='Gas', carrier='gas')
 
 n_konv.add('Load', name='Stromlast', bus='Strom', p_set=strombedarf)
 n_konv.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 
 n_konv.add('Generator', name='Netz_Import', bus='Strom',
-           p_nom=np.inf, marginal_cost=strom_preis, carrier='grid')
-n_konv.add('Generator', name='Gas_Versorgung', bus='Gas',
-           p_nom=np.inf, marginal_cost=gas_preis, carrier='gas')
-
-n_konv.add('Link', name='Gaskessel', bus0='Gas', bus1='Waerme',
-           p_nom_extendable=True, efficiency=0.95,
-           capital_cost=7, lifetime=20)
+           p_nom=strombedarf.max(), marginal_cost=strom_preis,
+           capital_cost=capital_cost_netzanschluss, carrier='grid')
+n_konv.add('Generator', name='Gaskessel', bus='Waerme',
+           p_nom=waermebedarf.max(), marginal_cost=gas_cost_heat, carrier='gas')
 
 n_konv.optimize(solver_name='gurobi')
 
 # Ergebnisse konventionell
 konv_strom_netz = n_konv.generators_t.p['Netz_Import'].sum()
-konv_gas_kessel = n_konv.links_t.p0['Gaskessel'].sum()
+konv_gas_kessel = n_konv.generators_t.p['Gaskessel'].sum()
 konv_strom_kosten = konv_strom_netz * strom_preis
-konv_gas_kosten = konv_gas_kessel * gas_preis
-konv_betriebskosten = konv_strom_kosten + konv_gas_kosten
-
-konv_invest_year = n_konv.links.p_nom_opt['Gaskessel'] * 7
-konv_gesamt_jahr = konv_betriebskosten + konv_invest_year
+konv_gas_kosten = konv_gas_kessel * gas_cost_heat
+konv_netzanschluss_kosten = capital_cost_netzanschluss * strombedarf.max()
+konv_betriebskosten = konv_strom_kosten + konv_gas_kosten + konv_netzanschluss_kosten
+konv_gesamt_jahr = konv_betriebskosten
 
 # ============================================================
 # 3. ZUKUNFTSSYSTEM
@@ -149,8 +148,8 @@ print("-" * 60)
 print(f"Netzimport [kWh]:              {konv_strom_netz:>14,.0f} {zuk_strom_import:>14,.0f}")
 print(f"Stromimportkosten [€/a]:       {konv_strom_kosten:>14,.2f} {zuk_kosten_import:>14,.2f}")
 print(f"Gaskosten [€/a]:               {konv_gas_kosten:>14,.2f} {'---':>14s}")
-print(f"Betriebskosten [€/a]:          {konv_betriebskosten:>14,.2f} {zuk_betriebskosten:>14,.2f}")
-print(f"Investitionskosten [€/a]:      {konv_invest_year:>14,.2f} {zuk_invest_year:>14,.2f}")
+print(f"Netzanschlusskosten [€/a]:     {konv_netzanschluss_kosten:>14,.2f} {'---':>14s}")
+print(f"Investitionskosten [€/a]:      {'---':>14s} {zuk_invest_year:>14,.2f}")
 print(f"Gesamtkosten [€/a]:            {konv_gesamt_jahr:>14,.2f} {zuk_gesamt_jahr:>14,.2f}")
 
 einsparung = konv_gesamt_jahr - zuk_gesamt_jahr
@@ -172,6 +171,7 @@ for bar, val in zip(bars, netz_import_werte):
 ax.set_ylabel('Netzimport [kWh/Jahr]')
 ax.set_title('Netzimport – Konventionell vs. Zukunftssystem')
 ax.set_ylim(0, max(netz_import_werte) * 1.15)
+ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'{x:,.0f}'))
 plt.tight_layout()
 plt.savefig('plot_vergleich_netzimport.png', dpi=150)
 plt.show()
@@ -186,6 +186,7 @@ for bar, val in zip(bars, strom_kosten_werte):
 ax.set_ylabel('Stromimportkosten [€/Jahr]')
 ax.set_title('Stromimportkosten – Konventionell vs. Zukunftssystem')
 ax.set_ylim(0, max(strom_kosten_werte) * 1.15)
+ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'{x:,.0f}'))
 plt.tight_layout()
 plt.savefig('plot_vergleich_stromkosten.png', dpi=150)
 plt.show()
@@ -250,38 +251,44 @@ plt.tight_layout()
 plt.savefig('plot_speicher_fuellstand.png', dpi=150)
 plt.show()
 
-# --- Plot 6: Betriebskosten-Vergleich (gestapelt) ---
+# --- Plot 6: Gesamtkosten-Vergleich (gestapelt) ---
 fig, ax = plt.subplots(figsize=(10, 6))
 
 x = np.arange(2)
 breite = 0.5
 
-# Konventionell: Strom + Gas (keine Invest)
-konv_stack = [konv_strom_kosten, konv_gas_kosten, 0]
+# Konventionell: Strom + Gas + Netzanschluss
+konv_stack = [konv_strom_kosten, konv_gas_kosten, konv_netzanschluss_kosten, 0]
 # Zukunft: Stromimport + Invest
-zuk_stack = [zuk_kosten_import, 0, zuk_invest_year]
+zuk_stack = [zuk_kosten_import, 0, 0, zuk_invest_year]
 
 p1 = ax.bar(x, [konv_stack[0], zuk_stack[0]], breite, color='#e74c3c', label='Stromkosten')
-p2 = ax.bar(x, [konv_stack[1], zuk_stack[1]], breite, bottom=[konv_stack[0], zuk_stack[0]],
+p2 = ax.bar(x, [konv_stack[1], zuk_stack[1]], breite,
+            bottom=[konv_stack[0], zuk_stack[0]],
             color='#f39c12', label='Gaskosten')
 p3 = ax.bar(x, [konv_stack[2], zuk_stack[2]], breite,
             bottom=[konv_stack[0]+konv_stack[1], zuk_stack[0]+zuk_stack[1]],
+            color='#9b59b6', label='Netzanschlusskosten')
+p4 = ax.bar(x, [konv_stack[3], zuk_stack[3]], breite,
+            bottom=[konv_stack[0]+konv_stack[1]+konv_stack[2], zuk_stack[0]+zuk_stack[1]+zuk_stack[2]],
             color='#3498db', label='Investitionskosten (Annuität)')
 
 # Gesamtwerte oben anzeigen
-konv_total = konv_betriebskosten  # nur Betriebskosten
-zuk_total = zuk_gesamt_jahr
-for i, total in enumerate([konv_total, zuk_total]):
+for i, total in enumerate([konv_gesamt_jahr, zuk_gesamt_jahr]):
     ax.text(i, total + 20000, f'{total:,.0f} €', ha='center', fontsize=11, fontweight='bold')
+
+# Einheitliche Skala
+max_kosten = max(konv_gesamt_jahr, zuk_gesamt_jahr)
+ax.set_ylim(0, max_kosten * 1.2)
 
 ax.set_xticks(x)
 ax.set_xticklabels(['Konventionell', 'Zukunftssystem'])
 ax.set_ylabel('Kosten [€/Jahr]')
 ax.set_title('Jährliche Gesamtkosten – Vergleich beider Systeme')
-ax.legend(loc='upper right')
-ax.set_ylim(0, max(konv_gesamt_jahr, zuk_gesamt_jahr) * 1.15)
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=4)
+ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'{x:,.0f}'))
 plt.tight_layout()
-plt.savefig('plot_vergleich_betriebskosten.png', dpi=150)
+plt.savefig('plot_vergleich_betriebskosten.png', dpi=150, bbox_inches='tight')
 plt.show()
 
 print("\nAlle Plots wurden gespeichert!")

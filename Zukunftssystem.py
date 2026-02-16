@@ -61,7 +61,7 @@ waermespeicher_lifetime = 25                # Jahre
 waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
 # Netzinteraktion
-netz_import_kosten = 0.16     # €/kWh
+netz_import_kosten = 0.1361     # €/kWh
 
 # ============================================================
 # 3. Daten vorbereiten
