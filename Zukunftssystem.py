@@ -16,22 +16,22 @@ import numpy as np
 # ============================================================
 
 # Heizlast einlesen
-df_heizlast = pd.read_csv('heizlast_2019.csv', sep=',', encoding='utf-8')
+df_heizlast = pd.read_csv('Abgabeordner Gruppe 9/heizlast_2019.csv', sep=',', encoding='utf-8')
 df_heizlast['datetime'] = pd.to_datetime(df_heizlast['MESS_DATUM'].astype(str), format='%Y%m%d%H')
 df_heizlast.set_index('datetime', inplace=True)
 
 # Strombedarf (Lampen) einlesen
-df_strombedarf = pd.read_csv('hourly_lamp_energy_2019.csv', sep=';', encoding='utf-8')
+df_strombedarf = pd.read_csv('Abgabeordner Gruppe 9/hourly_lamp_energy_2019.csv', sep=';', encoding='utf-8')
 df_strombedarf['datetime'] = pd.to_datetime(df_strombedarf['DateTime'].astype(str), format='%Y%m%d%H')
 df_strombedarf.set_index('datetime', inplace=True)
 
 # COP Wärmepumpe einlesen
-df_cop = pd.read_csv('heatpump_cop_2019.csv', sep=',', encoding='utf-8')
+df_cop = pd.read_csv('Abgabeordner Gruppe 9/heatpump_cop_2019.csv', sep=',', encoding='utf-8')
 df_cop['datetime'] = pd.to_datetime(df_cop['MESS_DATUM'].astype(str), format='%Y%m%d%H')
 df_cop.set_index('datetime', inplace=True)
 
 # Windkraftanlagen-Leistung einlesen
-df_wind = pd.read_csv('Windanlage Leistungsdaten.csv', sep=';', encoding='utf-8', skiprows=4)
+df_wind = pd.read_csv('Abgabeordner Gruppe 9/Windanlage Leistungsdaten.csv', sep=';', encoding='utf-8', skiprows=4)
 df_wind = df_wind[['time', 'electricity']].copy()
 df_wind['datetime'] = pd.to_datetime(df_wind['time'])
 df_wind.set_index('datetime', inplace=True)
@@ -42,7 +42,7 @@ df_wind = df_wind.rename(columns={'electricity': 'Wind_kW'})
 # ============================================================
 
 # Windkraftanlage
-capital_cost_wind = 150                     # €/kW/a als Annuität
+capital_cost_wind = 100                     # €/kW/a als Annuität
 wind_lifetime = 20                          # Jahre
 wind_nennleistung_vergleichsanlage = 6000   # kW - Nennleistung der Vergleichsanlage
 
@@ -52,16 +52,16 @@ stromspeicher_lifetime = 15
 stromspeicher_standing_loss = 0.0001         # Verlust pro Stunde
 
 # Wärmepumpe
-capital_cost_wp = 480           # €/kW/a als Annuität
+capital_cost_wp = 38           # €/kW/a als Annuität
 wp_lifetime = 20                # Jahre
 
 # Wärmespeicher
-capital_cost_waermespeicher = 5              # €/kWh/a als Annuität
+capital_cost_waermespeicher = 2              # €/kWh/a als Annuität
 waermespeicher_lifetime = 25                # Jahre
 waermespeicher_standing_loss = 0.005         # Verlust pro Stunde
 
 # Stromnetz
-netz_import_kosten = 0.1361   # €/kWh
+netz_import_kosten = 0.1361     # €/kWh
 
 # ============================================================
 # 3. Daten vorbereiten
@@ -272,6 +272,6 @@ print(f'Nur {windenergie_genutzt_prozent:.2f} % der möglichen Energie der Windk
 
 print("\n" + "=" * 80)
 print("Optimierung erfolgreich abgeschlossen!")
-print("=" * 80)
+# Referenzen
+# [4] Destatis, "Erdgas - und Strom - Durchschnittspreise," Destatis.de. [Online]. Verfügbar unter: https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Erdgas-Strom-DurchschnittsPreise/_inhalt.html . [Zugriff am: 16-02-2026]
 print(f"\n")
-

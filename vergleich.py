@@ -17,19 +17,19 @@ locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 # 1. Gemeinsame Daten einlesen
 # ============================================================
 
-df_heizlast = pd.read_csv('heizlast_2019.csv', sep=',', encoding='utf-8')
+df_heizlast = pd.read_csv('Abgabeordner Gruppe 9/heizlast_2019.csv', sep=',', encoding='utf-8')
 df_heizlast['datetime'] = pd.to_datetime(df_heizlast['MESS_DATUM'].astype(str), format='%Y%m%d%H')
 df_heizlast.set_index('datetime', inplace=True)
 
-df_strombedarf = pd.read_csv('hourly_lamp_energy_2019.csv', sep=';', encoding='utf-8')
+df_strombedarf = pd.read_csv('Abgabeordner Gruppe 9/hourly_lamp_energy_2019.csv', sep=';', encoding='utf-8')
 df_strombedarf['datetime'] = pd.to_datetime(df_strombedarf['DateTime'].astype(str), format='%Y%m%d%H')
 df_strombedarf.set_index('datetime', inplace=True)
 
-df_cop = pd.read_csv('heatpump_cop_2019.csv', sep=',', encoding='utf-8')
+df_cop = pd.read_csv('Abgabeordner Gruppe 9/heatpump_cop_2019.csv', sep=',', encoding='utf-8')
 df_cop['datetime'] = pd.to_datetime(df_cop['MESS_DATUM'].astype(str), format='%Y%m%d%H')
 df_cop.set_index('datetime', inplace=True)
 
-df_wind = pd.read_csv('Windanlage Leistungsdaten.csv', sep=';', encoding='utf-8', skiprows=4)
+df_wind = pd.read_csv('Abgabeordner Gruppe 9/Windanlage Leistungsdaten.csv', sep=';', encoding='utf-8', skiprows=4)
 df_wind = df_wind[['time', 'electricity']].copy()
 df_wind['datetime'] = pd.to_datetime(df_wind['time'])
 df_wind.set_index('datetime', inplace=True)
@@ -106,7 +106,7 @@ n_zuk.add('Load', name='Waermelast', bus='Waerme', p_set=waermebedarf)
 
 n_zuk.add('Generator', name='Windkraftanlage', bus='Strom',
           p_nom_extendable=True, p_max_pu=wind_p_max_pu,
-          capital_cost=150, lifetime=20, carrier='wind')
+          capital_cost=100, lifetime=20, carrier='wind')
 
 n_zuk.add('Store', name='Stromspeicher', bus='Strom',
           e_nom_extendable=True, capital_cost=45,
@@ -114,10 +114,10 @@ n_zuk.add('Store', name='Stromspeicher', bus='Strom',
 
 n_zuk.add('Link', name='Waermepumpe', bus0='Strom', bus1='Waerme',
           efficiency=cop_zeitreihe, p_nom_extendable=True,
-          capital_cost=480, lifetime=20)
+          capital_cost=38, lifetime=20)
 
 n_zuk.add('Store', name='Waermespeicher', bus='Waerme',
-          e_nom_extendable=True, capital_cost=5,
+          e_nom_extendable=True, capital_cost=2,
           standing_loss=0.005, e_cyclic=True, lifetime=25)
 
 n_zuk.add('Generator', name='Netz_Import', bus='Strom',
@@ -237,12 +237,14 @@ strom_speicher = n_zuk.stores_t.e['Stromspeicher']
 axes[0].plot(strom_speicher.index, strom_speicher.values, color='#3498db', linewidth=0.8)
 axes[0].set_ylabel('Energie [kWh]')
 axes[0].set_title('Stromspeicher – Füllstand über das Jahr')
+axes[0].set_ylim(0, strom_speicher.max() * 1.1)
 
 waerme_speicher = n_zuk.stores_t.e['Waermespeicher']
 axes[1].plot(waerme_speicher.index, waerme_speicher.values, color='#e74c3c', linewidth=0.8)
 axes[1].set_ylabel('Energie [kWh]')
 axes[1].set_xlabel('Zeit')
 axes[1].set_title('Wärmespeicher – Füllstand über das Jahr')
+axes[1].set_ylim(0, waerme_speicher.max() * 1.1)
 
 for a in axes:
     a.xaxis.set_major_locator(mdates.MonthLocator())
@@ -290,3 +292,6 @@ plt.savefig('plot_vergleich_betriebskosten.png', dpi=150, bbox_inches='tight')
 plt.show()
 
 print("\nAlle Plots wurden gespeichert!")
+
+# Referenzen
+# [4] Destatis, "Erdgas - und Strom - Durchschnittspreise," Destatis.de. [Online]. Verfügbar unter: https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Erdgas-Strom-DurchschnittsPreise/_inhalt.html . [Zugriff am: 16-02-2026]

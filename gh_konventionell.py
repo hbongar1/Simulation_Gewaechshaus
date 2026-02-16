@@ -14,12 +14,12 @@ import numpy as np
 # ============================================================
 
 # Heizlast einlesen
-df_heizlast = pd.read_csv('heizlast_2019.csv', sep=',', encoding='utf-8')
+df_heizlast = pd.read_csv('Abgabeordner Gruppe 9/heizlast_2019.csv', sep=',', encoding='utf-8')
 df_heizlast['datetime'] = pd.to_datetime(df_heizlast['MESS_DATUM'].astype(str), format='%Y%m%d%H')
 df_heizlast.set_index('datetime', inplace=True)
 
 # Strombedarf (Lampen) einlesen
-df_strombedarf = pd.read_csv('hourly_lamp_energy_2019.csv', sep=';', encoding='utf-8')
+df_strombedarf = pd.read_csv('Abgabeordner Gruppe 9/hourly_lamp_energy_2019.csv', sep=';', encoding='utf-8')
 df_strombedarf['datetime'] = pd.to_datetime(df_strombedarf['DateTime'].astype(str), format='%Y%m%d%H')
 df_strombedarf.set_index('datetime', inplace=True)
 
@@ -146,3 +146,6 @@ print(f"Stromkosten:          {kosten_strom:>12.2f} €")
 print(f"Gaskosten:            {kosten_gas:>12.2f} €")
 print(f"Betriebskosten:       {operational_costs:>12.2f} €")
 print(f"\n")
+
+# Referenzen
+# [4] Destatis, "Erdgas - und Strom - Durchschnittspreise," Destatis.de. [Online]. Verfügbar unter: https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Erdgas-Strom-DurchschnittsPreise/_inhalt.html . [Zugriff am: 16-02-2026]

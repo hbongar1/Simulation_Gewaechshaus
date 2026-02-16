@@ -49,3 +49,6 @@ plt.title("Stündlicher COP der Wärmepumpe – Köln 2019")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+
+# Referenzen
+# [4] Destatis, "Erdgas - und Strom - Durchschnittspreise," Destatis.de. [Online]. Verfügbar unter: https://www.destatis.de/DE/Themen/Wirtschaft/Preise/Erdgas-Strom-DurchschnittsPreise/_inhalt.html . [Zugriff am: 16-02-2026]
