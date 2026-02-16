@@ -91,7 +91,7 @@ konv_gesamt_jahr = konv_betriebskosten
 print("ZUKUNFTSSYSTEM - Optimierung läuft...")
 
 wind_nennleistung_vergleich = 6000
-netz_import_kosten = 0.16
+netz_import_kosten = 0.1361
 
 wind_p_max_pu = (windleistung / wind_nennleistung_vergleich).clip(lower=0, upper=1)
 
