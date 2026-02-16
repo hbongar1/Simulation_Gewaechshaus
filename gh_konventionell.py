@@ -131,16 +131,16 @@ print(f"Stromlast:        {strom_last:>12.2f} kWh")
 
 # Wärmebilanz
 print("\n--- Wärmebilanz ---")
-gas_versorgung = network.generators_t.p['Gasimport'].sum()
+gas_import = network.generators_t.p['Gasimport'].sum()
 
 waerme_last = network.loads_t.p['Waermelast'].sum()
-print(f"Gasimport:    {gas_versorgung:>12.2f} kWh")
+print(f"Gasimport:    {gas_import:>12.2f} kWh")
 print(f"Wärmelast:    {waerme_last:>12.2f} kWh")
 
 # Betriebskosten
 print("\n--- Betriebskosten pro Jahr ---")
 kosten_strom = strom_netz * strom_preis
-kosten_gas = gas_versorgung * gas_cost_heat
+kosten_gas = gas_import * gas_cost_heat
 operational_costs = round(kosten_strom + kosten_gas, 2)
 print(f"Stromkosten:          {kosten_strom:>12.2f} €")
 print(f"Gaskosten:            {kosten_gas:>12.2f} €")
